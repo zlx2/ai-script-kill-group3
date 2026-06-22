@@ -18,6 +18,7 @@ import io.agentscope.core.tool.Tool;
 import io.agentscope.harness.agent.HarnessAgent;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.Setter;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -37,6 +38,7 @@ import java.util.stream.Collectors;
  * 就像真人聊天一样，你说过的话我都记得。
  */
 @Getter
+@Setter
 @Builder
 public class NpcAgent extends HarnessAgent {
 
@@ -47,6 +49,7 @@ public class NpcAgent extends HarnessAgent {
     private final String npcBackground;     // NPC背景故事
 //    private final List<Tool> tools;         // 工具列表
     private final AgentStateStore stateStore;
+    private String sessionId;
 
     /**
      * 静态工厂方法：创建NPC对话Agent

@@ -41,7 +41,6 @@ public class PlotDesignAgent extends HarnessAgent {
     private final OpenAIChatModel model;
     private final String name;
     private final AgentStateStore stateStore;
-
     /**
      * System Prompt
      */
