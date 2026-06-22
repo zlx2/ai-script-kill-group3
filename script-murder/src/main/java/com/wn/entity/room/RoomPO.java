@@ -27,10 +27,11 @@ import java.util.UUID;
 @DynamicUpdate
 public class RoomPO {
     /**
-     * 房间ID UUID主键
+     * 房间ID UUID主键：UUID 的 roomId 是 36 位字符串，又长又难记，不可能让用户手动输入
      */
     @Id
     @Column(name = "room_id", nullable = false, length = 36)
+//    @GeneratedValue(strategy = GenerationType.UUID)
     private String roomId;
     /**
      * 新增前自动生成UUID
@@ -47,19 +48,20 @@ public class RoomPO {
     }
 
     /**
-     * 房间名称
+     * 房间名称：给玩家看的展示名，偏人类阅读，比如「深夜凶宅发车局」「新手欢乐本专场」，
+     * 支持重复，方便玩家一眼看懂房间主题。
      */
     @Column(name = "room_name", nullable = false, length = 100)
     private String roomName;
 
     /**
-     * 房间唯一编号
+     * 房间唯一编号：roomNo 是短数字 / 字母，专门给人使用，是核心交互字段
      */
     @Column(name = "room_no", nullable = false, length = 20)
     private String roomNo;
 
     /**
-     * 关联剧本ID
+     * 关联剧本ID 剧本主键 ID，用来把「游戏房间」和「剧本」做关联绑定。
      */
     @Column(name = "script_id", nullable = false)
     private Long scriptId;
@@ -95,7 +97,7 @@ public class RoomPO {
     private Integer currentRound = 0;
 
     /**
-     * 当前游戏阶段：waiting/reading/discussion/searching/voting/result
+     * 当前游戏阶段：waiting等待开局/reading读本阶段/discussion自由讨论/searching搜证环节/voting投票指认/result结局公示
      */
     @Column(name = "current_stage", length = 20)
     private String currentStage = "waiting";
