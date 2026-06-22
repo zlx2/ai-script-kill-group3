@@ -6,5 +6,12 @@
  **/
 package com.wn.mapper.script;
 
-public class ScriptMapper {
+import com.wn.entity.script.ScriptPO;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface ScriptMapper extends JpaRepository<ScriptPO, Long> , JpaSpecificationExecutor<ScriptPO> {
+
 }

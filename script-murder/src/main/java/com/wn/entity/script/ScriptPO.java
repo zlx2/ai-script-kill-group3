@@ -1,6 +1,6 @@
 /**
  * @Author: 弗
- * @Description:
+ * @Description:剧本实体类
  * @DateTime: 2026/6/22 14:02
  * @Component:
  **/
@@ -16,12 +16,7 @@ import java.time.LocalDateTime;
 
 @Data
 @Entity
-@Table(name = "script_info",
-        indexes = {
-                @Index(name = "idx_type", columnList = "script_type"),
-                @Index(name = "idx_status", columnList = "status"),
-                @Index(name = "idx_difficulty", columnList = "difficulty")
-        })
+@Table(name = "script_info")
 @DynamicInsert
 @DynamicUpdate
 public class ScriptPO {
@@ -76,10 +71,10 @@ public class ScriptPO {
     private Integer femaleCount = 0;
 
     /**
-     * 预计时长（分钟）
+     * 预计时长（小时）
      */
     @Column(name = "duration")
-    private Integer duration = 120;
+    private Integer duration = 3;
 
     /**
      * 剧本简介
@@ -106,7 +101,7 @@ public class ScriptPO {
     private String author;
 
     /**
-     * 是否AI生成：0否 1是
+     * 剧本来源：平台AI生成/用户：0否 1是
      */
     @Column(name = "is_ai_generated")
     private Byte isAiGenerated = 0;
@@ -129,7 +124,7 @@ public class ScriptPO {
     @Column(name = "rating", precision = 3, scale = 2)
     private BigDecimal rating = new BigDecimal("0.00");
 
-    /**
+    /*
      * 创建时间
      */
     @Column(name = "create_time", updatable = false)
