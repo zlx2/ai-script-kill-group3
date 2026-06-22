@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.15</version>
+        <version>3.2.5</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.wn</groupId>
@@ -27,10 +27,42 @@
         <url/>
     </scm>
     <properties>
-        <java.version>21</java.version>
-        <agentscope.version>2.0.0-RC1</agentscope.version>
+        <java.version>17</java.version>
+        <agentscope.version>2.0.0-RC2</agentscope.version>
     </properties>
     <dependencies>
+<!--        糊涂工具 国产 Java 开源工具类库-->
+        <dependency>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-all</artifactId>
+            <version>5.8.27</version>
+        </dependency>
+<!--        MyBatis-Plus-->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-boot-starter</artifactId>
+            <version>3.5.5</version>
+        </dependency>
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>8.0.33</version>
+        </dependency>
+<!--        WebSocket 协议支持，实现双向实时通信-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
+        </dependency>
+<!--        Redis-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+<!--        AMQP（高级消息队列协议） 支持，默认使用 RabbitMQ-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-amqp</artifactId>
+        </dependency>
 <!--        jwt依赖的导入-->
         <dependency>
             <groupId>com.auth0</groupId>
@@ -41,6 +73,7 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
+<!--        Agentscope-->
         <dependency>
             <groupId>io.agentscope</groupId>
             <artifactId>agentscope-harness</artifactId>
@@ -58,13 +91,28 @@
         </dependency>
     </dependencies>
     <repositories>
+        <!--        AgentScope 官方发布仓库-->
+        <!-- Agent 正式包仓库（无RC） -->
+        <repository>
+            <id>agentscope-release</id>
+            <name>AgentScope Official Release Repo</name>
+            <url>https://agentscope.io/maven/releases</url>
+            <releases><enabled>true</enabled></releases>
+            <snapshots><enabled>false</enabled></snapshots>
+        </repository>
+        <!-- RC/快照包专用仓库（必须加才能拉2.0.0-RC2） -->
+        <repository>
+            <id>agentscope-snapshot</id>
+            <name>AgentScope Snapshot Repo</name>
+            <url>https://agentscope.io/maven/snapshots</url>
+            <releases><enabled>false</enabled></releases>
+            <snapshots><enabled>true</enabled></snapshots>
+        </repository>
         <repository>
             <id>aliyunmaven</id>
             <url>https://maven.aliyun.com/repository/public</url>
-        </repository>
-        <repository>
-            <id>agentscope</id>
-            <url>https://maven.agentscope.io</url>
+            <releases><enabled>true</enabled></releases>
+            <snapshots><enabled>true</enabled></snapshots>
         </repository>
     </repositories>
     <build>
