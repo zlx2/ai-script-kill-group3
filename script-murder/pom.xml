@@ -31,6 +31,12 @@
         <agentscope.version>2.0.0-RC1</agentscope.version>
     </properties>
     <dependencies>
+        <!--     引入jwt依赖   -->
+        <dependency>
+            <groupId>com.auth0</groupId>
+            <artifactId>java-jwt</artifactId>
+            <version>4.4.0</version>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
@@ -110,6 +116,10 @@
                         </configuration>
                     </execution>
                 </executions>
+                <configuration>
+                    <source>7</source>
+                    <target>7</target>
+                </configuration>
             </plugin>
         </plugins>
     </build>
