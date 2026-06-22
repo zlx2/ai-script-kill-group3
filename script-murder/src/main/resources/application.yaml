@@ -1,3 +1,53 @@
 spring:
   application:
     name: script-murder
+  datasource:
+    url: jdbc:mysql://localhost:3306/woniu_120?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: 123456
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+  rabbitmq:
+    host: 192.168.120.12
+    port: 5672
+    username: guest
+    password: guest
+
+agentscope:
+  # 配置大模型的连接信息，AgentScope支持同时配置多个模型
+  model:
+    # 默认使用的模型
+    default-model:deepseek
+
+  # DeepSeek配置（兼容OpenAI协议）
+  deepseek:
+    type: openai
+    api-key: ${DEEPSEEK_API_KEY}
+    base-url: https://api.deepseek.com/v1
+    model-name: deepseek-chat
+    temperature: 0.7
+    max-tokens: 4096
+
+  # 配置Agent会话的存储方式
+  session:
+    # 存储类型：memory内存 / jdbc数据库 / redis
+    store-type: jdbc
+    # 会话过期时间（秒）
+    expire-seconds: 86400
+
+#Harness是AgentScope的工程化基础设施，提供Hook机制
+  harness:
+#    是否启用对话历史压缩（防止上下文过长）
+    enable-compression: true
+#    压缩阈值，超过多少条消息开始压缩
+    compression-threshold: 20
+#    是否启用记忆功能
+    enable-memory: true
+
+server:
+  port: 8080
