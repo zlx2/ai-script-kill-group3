@@ -26,5 +26,15 @@
       <option name="name" value="JBoss Community repository" />
       <option name="url" value="https://repository.jboss.org/nexus/content/repositories/public/" />
     </remote-repository>
+    <remote-repository>
+      <option name="id" value="agentscope-release" />
+      <option name="name" value="AgentScope Official Release Repo" />
+      <option name="url" value="https://agentscope.io/maven/releases" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="agentscope-snapshot" />
+      <option name="name" value="AgentScope Snapshot Repo" />
+      <option name="url" value="https://agentscope.io/maven/snapshots" />
+    </remote-repository>
   </component>
 </project>
