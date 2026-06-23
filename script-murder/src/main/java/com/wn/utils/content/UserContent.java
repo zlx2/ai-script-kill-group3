@@ -12,7 +12,6 @@ public class UserContent {
     public static Long getUserIdHolder(){
         return userIdHolder.get();
     }
-
     public static String getUsernameHolder(){
         return usernameHolder.get();
     }

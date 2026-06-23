@@ -15,4 +15,6 @@ public interface UserinfoMapper extends JpaRepository<Userinfo,Long> {
     Userinfo findOneByEmail(String email);
 
     Userinfo findByUsername(String username);
+
+    Object findUserById(Long userId);
 }

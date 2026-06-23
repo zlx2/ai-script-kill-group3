@@ -22,14 +22,14 @@ public class JWTUtil {
     public static final long TOKEN_EXPIRE_TIME = 30 * 60 * 1000*24; //token过期时间
     private static final String ISSUER = "woniuxy"; //签发人
     /**    生成签名     */
-    public static String generateToken(String uname,Long userId){
+    public static String generateToken(String username,Long userId){
         Date now = new Date();        //创建签名算法对象
         Algorithm algorithm = Algorithm.HMAC256(SECRET_KEY); //算法
         String token = JWT.create()
                 .withIssuer(ISSUER) //签发人
                 .withIssuedAt(now)  //签发时间
                 .withExpiresAt(new Date(now.getTime() + TOKEN_EXPIRE_TIME)) //过期时间，可由redis来控制
-                .withClaim("username", uname) //保存身份标识
+                .withClaim("username", username) //保存身份标识
                 .withClaim("userId",userId)
                 .sign(algorithm);
         return token;
@@ -54,7 +54,7 @@ public class JWTUtil {
     /**   从token获取uname     */
     public static String getUname(String token){
         try{
-            return JWT.decode(token).getClaim("uname").asString();
+            return JWT.decode(token).getClaim("username").asString();
         }catch(Exception ex){
             ex.printStackTrace();
         }
