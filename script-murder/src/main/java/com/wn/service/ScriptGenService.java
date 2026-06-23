@@ -148,19 +148,41 @@ public class ScriptGenService {
 
     private void saveRoles(Long scriptId, String rolesJson) {
         try {
-            JsonNode root = objectMapper.readTree(rolesJson);
+            // 清洗 JSON，去除 Markdown 冗余内容
+            String cleanJson = extractPureJson(rolesJson);
+
+            if (cleanJson.isEmpty()) {
+                log.warn("清洗后JSON为空，保存原始文本");
+                ScriptRole role = ScriptRole.builder()
+                        .scriptId(scriptId)
+                        .roleName("角色列表")
+                        .characterStory(rolesJson)
+                        .build();
+                scriptRoleMapper.insert(role);
+                return;
+            }
+
+            JsonNode root = objectMapper.readTree(cleanJson);
             if (root.isArray()) {
                 for (JsonNode roleNode : root) {
                     ScriptRole role = ScriptRole.builder()
                             .scriptId(scriptId)
-                            .roleName(roleNode.has("roleName") ? roleNode.get("roleName").asText() : "")
-                            .gender(roleNode.has("gender") ? roleNode.get("gender").asText() : "")
-                            .age(roleNode.has("age") ? roleNode.get("age").asInt() : null)
-                            .characterStory(roleNode.has("characterStory") ? roleNode.get("characterStory").asText() : "")
-                            .secretInfo(roleNode.has("secretInfo") ? roleNode.get("secretInfo").asText() : "")
+                            .roleName(roleNode.hasNonNull("roleName") ? roleNode.get("roleName").asText("未知角色") : "未知角色")
+                            .gender(roleNode.hasNonNull("gender") ? roleNode.get("gender").asText("未知") : "未知")
+                            .age(roleNode.hasNonNull("age") ? roleNode.get("age").asInt(0) : 0)
+                            .characterStory(roleNode.hasNonNull("characterStory") ? roleNode.get("characterStory").asText("") : "")
+                            .secretInfo(roleNode.hasNonNull("secretInfo") ? roleNode.get("secretInfo").asText("") : "")
                             .build();
                     scriptRoleMapper.insert(role);
                 }
+            } else {
+                log.warn("JSON不是数组格式，保存原始文本");
+                ScriptRole role = ScriptRole.builder()
+                        .scriptId(scriptId)
+                        .roleName("角色列表")
+                        .characterStory(rolesJson)
+                        .build();
+                scriptRoleMapper.insert(role);
             }
         } catch (Exception e) {
             log.warn("解析角色JSON失败，保存原始文本", e);
@@ -193,6 +215,46 @@ public class ScriptGenService {
                             .map(b -> ((TextBlock) b).getText())
                             .collect(Collectors.joining("\n"));
                 });
+    }
+
+    /**
+     * 添加JSON清洗方法，用于提取纯JSON字符串
+     * @param content
+     * @return
+     */
+
+    private String extractPureJson(String content) {
+        if (content == null || content.isEmpty()) {
+            return "";
+        }
+
+        // 去除 Markdown 标题 (#, ##, ### 等)
+        content = content.replaceAll("^#{1,6}\\s+", "");
+
+        // 去除 markdown 代码块标记（```json 或 ```）
+        content = content.replaceAll("```json\\s*", "");
+        content = content.replaceAll("```\\s*", "");
+
+        // 去除首尾空格和换行
+        content = content.trim();
+
+        // 查找 JSON 数组的起始和结束位置
+        int startIndex = content.indexOf('[');
+        int endIndex = content.lastIndexOf(']');
+
+        if (startIndex >= 0 && endIndex >= startIndex) {
+            return content.substring(startIndex, endIndex + 1);
+        }
+
+        // 如果找不到数组，尝试找对象
+        startIndex = content.indexOf('{');
+        endIndex = content.lastIndexOf('}');
+
+        if (startIndex >= 0 && endIndex >= startIndex) {
+            return content.substring(startIndex, endIndex + 1);
+        }
+
+        return content;
     }
 
     public Mono<String> generateRoles(String plotOutline) {

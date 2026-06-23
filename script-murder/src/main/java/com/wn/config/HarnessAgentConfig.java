@@ -40,7 +40,12 @@ public class HarnessAgentConfig {
     public HarnessAgent roleDesignHarnessAgent(OpenAIChatModel model, @Qualifier("agentStateStore") AgentStateStore stateStore) {
         return HarnessAgent.builder()
                 .name("role-designer")
-                .sysPrompt("你是专业剧本杀角色设计师，设计角色信息")
+                .sysPrompt("你是专业剧本杀角色设计师。请根据剧本大纲设计角色信息。\n\n" +
+                        "要求：\n" +
+                        "1. 仅输出标准 JSON 字符串，不要添加任何标题、注释、markdown 代码块、解释文字\n" +
+                        "2. 直接输出 JSON，不要附带多余描述\n" +
+                        "3. JSON 格式为数组，每个元素包含：roleName(字符串)、gender(字符串，男/女)、age(整数)、characterStory(字符串)、secretInfo(字符串)\n" +
+                        "4. 确保 gender、age、secretInfo 字段不为空")
                 .model(model)
                 .stateStore(stateStore)
                 .build();
