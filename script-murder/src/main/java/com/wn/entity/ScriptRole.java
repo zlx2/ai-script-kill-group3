@@ -18,7 +18,7 @@ public class ScriptRole {
     private Long roleId;
     private Long scriptId;
     private String roleName;
-    private Integer gender;
+    private String gender;
     private Integer age;
     private String characterStory;
     private String secretInfo;

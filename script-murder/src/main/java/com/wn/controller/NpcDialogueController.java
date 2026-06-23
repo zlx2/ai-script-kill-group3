@@ -7,17 +7,21 @@ package com.wn.controller;
  * @Component:
  **/
 
+import jakarta.validation.constraints.NotBlank;
 import com.wn.entity.R;
 import com.wn.service.NpcDialogueService;
 import org.springframework.http.MediaType;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * NPC对话接口
  */
 @RestController
 @RequestMapping("/api/ai/npc")
+@Validated
 public class NpcDialogueController {
 
     private final NpcDialogueService npcDialogueService;
@@ -30,12 +34,16 @@ public class NpcDialogueController {
      * 普通对话（一次性返回）
      */
     @PostMapping("/chat")
-    public R chat(@RequestParam Long roomId,
-                  @RequestParam Long npcRoleId,
-                  @RequestParam Long userId,
-                  @RequestParam String message) {
-        String reply = npcDialogueService.chat(roomId, npcRoleId, userId, message).block();
-        return new R(reply);
+    public Mono<R> chat(
+            @RequestParam Long roomId,
+            @RequestParam Long npcRoleId,
+            @RequestParam(required = false) Long userId,
+            @RequestParam @NotBlank(message = "消息不能为空") String message
+    ) {
+        // 兜底：userId为空则赋值游客0
+        Long realUserId = userId == null ? 0L : userId;
+        return npcDialogueService.chat(roomId, npcRoleId, realUserId, message)
+                .map(R::new);
     }
 
     /**

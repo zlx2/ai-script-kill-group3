@@ -26,6 +26,12 @@ public class InMemoryAgentStateStore implements AgentStateStore {
 
     @Override
     public void save(String userId, String sessionId, String key, State value) {
+        // 空参数拦截，杜绝null作为HashMap键
+        if (userId == null || userId.isBlank()
+                || sessionId == null || sessionId.isBlank()
+                || key == null || key.isBlank()) {
+            return;
+        }
         store.computeIfAbsent(userId, k -> new ConcurrentHashMap<>())
                 .computeIfAbsent(sessionId, k -> new ConcurrentHashMap<>())
                 .put(key, value);
@@ -33,8 +39,11 @@ public class InMemoryAgentStateStore implements AgentStateStore {
 
     @Override
     public void save(String userId, String sessionId, String key, List<? extends State> values) {
-        // 简单实现：把 List 包装成一个 State 存储
-        // 或者分别存储每个元素
+        if (userId == null || userId.isBlank()
+                || sessionId == null || sessionId.isBlank()
+                || key == null || key.isBlank()) {
+            return;
+        }
         ListStateWrapper wrapper = new ListStateWrapper(values);
         save(userId, sessionId, key, wrapper);
     }
@@ -42,6 +51,9 @@ public class InMemoryAgentStateStore implements AgentStateStore {
     @Override
     @SuppressWarnings("unchecked")
     public <T extends State> Optional<T> get(String userId, String sessionId, String key, Class<T> type) {
+        if (userId == null || userId.isBlank()) {
+            return Optional.empty();
+        }
         Map<String, Map<String, State>> userStore = store.get(userId);
         if (userStore == null) {
             return Optional.empty();
@@ -54,7 +66,6 @@ public class InMemoryAgentStateStore implements AgentStateStore {
         if (value == null) {
             return Optional.empty();
         }
-        // 如果类型匹配，返回；否则返回 empty
         if (type.isInstance(value)) {
             return Optional.of((T) value);
         }
@@ -64,6 +75,9 @@ public class InMemoryAgentStateStore implements AgentStateStore {
     @Override
     @SuppressWarnings("unchecked")
     public <T extends State> List<T> getList(String userId, String sessionId, String key, Class<T> itemType) {
+        if (userId == null || userId.isBlank()) {
+            return Collections.emptyList();
+        }
         Optional<State> result = get(userId, sessionId, key, State.class);
         if (result.isEmpty()) {
             return Collections.emptyList();
@@ -77,6 +91,9 @@ public class InMemoryAgentStateStore implements AgentStateStore {
 
     @Override
     public boolean exists(String userId, String sessionId) {
+        if (userId == null || userId.isBlank()) {
+            return false;
+        }
         Map<String, Map<String, State>> userStore = store.get(userId);
         if (userStore == null) {
             return false;
@@ -86,6 +103,9 @@ public class InMemoryAgentStateStore implements AgentStateStore {
 
     @Override
     public void delete(String userId, String sessionId) {
+        if (userId == null || userId.isBlank()) {
+            return;
+        }
         Map<String, Map<String, State>> userStore = store.get(userId);
         if (userStore != null) {
             userStore.remove(sessionId);
@@ -94,6 +114,9 @@ public class InMemoryAgentStateStore implements AgentStateStore {
 
     @Override
     public void delete(String userId, String sessionId, String key) {
+        if (userId == null || userId.isBlank()) {
+            return;
+        }
         Map<String, Map<String, State>> userStore = store.get(userId);
         if (userStore != null) {
             Map<String, State> sessionStore = userStore.get(sessionId);
@@ -105,6 +128,9 @@ public class InMemoryAgentStateStore implements AgentStateStore {
 
     @Override
     public Set<String> listSessionIds(String userId) {
+        if (userId == null || userId.isBlank()) {
+            return Collections.emptySet();
+        }
         Map<String, Map<String, State>> userStore = store.get(userId);
         if (userStore == null) {
             return Collections.emptySet();

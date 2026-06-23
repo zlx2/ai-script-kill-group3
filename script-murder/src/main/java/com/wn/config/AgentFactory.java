@@ -4,9 +4,6 @@ import com.wn.ai.agent.NpcAgent;
 import com.wn.ai.agent.PlotDesignAgent;
 import com.wn.ai.agent.RoleDesignAgent;
 import com.wn.ai.agent.ScriptMasterAgent;
-import io.agentscope.core.model.OpenAIChatModel;
-import io.agentscope.core.state.AgentStateStore;
-import org.springframework.stereotype.Component;
 
 //@Component
 public class AgentFactory {
