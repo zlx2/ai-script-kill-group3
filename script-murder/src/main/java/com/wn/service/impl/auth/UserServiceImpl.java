@@ -101,6 +101,10 @@ public class UserServiceImpl implements UserService {
         if (redisCode == null){
             return "验证码已跟过期，请重新获取";
         }
+        Userinfo existUser = userinfoMapper.findByUsername(userInfoDto.getUsername());
+        if (existUser != null){
+            return "用户名已存在，请重试";
+        }
         String registerCode = redisCode.toString();
         if (userInfoDto.getCode().equals(registerCode)){
             Userinfo userinfo = dto2PO(userInfoDto);
