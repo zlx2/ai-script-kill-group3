@@ -7,11 +7,12 @@
 package com.wn.mapper.room;
 
 import com.wn.entity.room.RoomPO;
-import io.fabric8.kubernetes.api.model.authentication.UserInfo;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface RoomMapper extends JpaRepository<RoomPO,Long> {
+public interface RoomMapper extends JpaRepository<RoomPO, String> {
 
 
     boolean existsByRoomNo(String roomNo);
+
+
 }

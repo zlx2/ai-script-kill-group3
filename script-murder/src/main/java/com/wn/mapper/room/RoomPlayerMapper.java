@@ -10,6 +10,6 @@ import com.wn.entity.room.RoomPO;
 import com.wn.entity.room.RoomPlayerPO;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface RoomPlayerMapper  extends JpaRepository<RoomPO,Long> {
-    void save(RoomPlayerPO player);
+public interface RoomPlayerMapper extends JpaRepository<RoomPlayerPO, Long> {
+
 }
