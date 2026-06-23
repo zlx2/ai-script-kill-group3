@@ -36,11 +36,13 @@ import java.util.stream.Collectors;
  */
 @Component
 @Getter
-@RequiredArgsConstructor
 public class PlotDesignAgent {
 
-    @Qualifier("plotDesignHarnessAgent")
     private final HarnessAgent plotDesignHarnessAgent;
+
+    public PlotDesignAgent(@Qualifier("plotDesignHarnessAgent") HarnessAgent plotDesignHarnessAgent) {
+        this.plotDesignHarnessAgent = plotDesignHarnessAgent;
+    }
 
     private static final String SYSTEM_PROMPT = """
             你是一个专业的剧本杀剧情策划师，擅长设计各种类型的剧本杀剧本。

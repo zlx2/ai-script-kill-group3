@@ -19,10 +19,14 @@ import java.util.stream.Collectors;
  */
 @Component
 @Getter
-@RequiredArgsConstructor
+
 public class ScriptMasterAgent {
-    @Qualifier("scriptMasterHarnessAgent")
+
+
     private final HarnessAgent scriptMasterHarnessAgent;
+    public ScriptMasterAgent(@Qualifier("scriptMasterHarnessAgent") HarnessAgent scriptMasterHarnessAgent) {
+        this.scriptMasterHarnessAgent = scriptMasterHarnessAgent;
+    }
 
     private static final String SYSTEM_PROMPT = """
             你是剧本杀总控策划，必须严格按照4步流程生成剧本：

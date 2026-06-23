@@ -26,10 +26,13 @@ import java.util.stream.Collectors;
  */
 @Component
 @Getter
-@RequiredArgsConstructor
+
 public class RoleDesignAgent {
-    @Qualifier("roleDesignHarnessAgent")
+
     private final HarnessAgent roleDesignHarnessAgent;
+    public RoleDesignAgent(@Qualifier("roleDesignHarnessAgent") HarnessAgent roleDesignHarnessAgent) {
+        this.roleDesignHarnessAgent = roleDesignHarnessAgent;
+    }
 
     private static final String SYSTEM_PROMPT = """
             你是一个专业的剧本杀角色设计师。

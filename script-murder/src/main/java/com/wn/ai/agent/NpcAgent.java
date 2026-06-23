@@ -37,11 +37,13 @@ import java.util.stream.Collectors;
  */
 @Component
 @Getter
-@RequiredArgsConstructor
 public class NpcAgent {
 
-    @Qualifier("npcHarnessAgent")
     private final HarnessAgent npcHarnessAgent;
+
+    public NpcAgent(@Qualifier("npcHarnessAgent") HarnessAgent npcHarnessAgent) {
+        this.npcHarnessAgent = npcHarnessAgent;
+    }
 
     private String npcName;
     private String npcPersonality;
