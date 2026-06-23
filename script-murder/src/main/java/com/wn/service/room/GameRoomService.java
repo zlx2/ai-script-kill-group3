@@ -8,12 +8,13 @@ package com.wn.service.room;
 
 import com.wn.controller.room.vo.RoomDetailVO;
 import com.wn.controller.room.vo.RoomPlayerVO;
+import com.wn.service.exception.BusinessException;
 
 import java.util.List;
 
 public  interface GameRoomService{
 
-    String createRoom(Long scriptId, String roomName, String password, Long userId);
+    String createRoom(Long scriptId, String roomName, String password, Long userId) throws BusinessException;
 
     Object getByRoomNo(String roomNo);
 

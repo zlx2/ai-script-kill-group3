@@ -6,5 +6,5 @@
  **/
 package com.wn.mapper.room;
 
-public class GameRoomMapper {
+public interface GameRoomMapper  {
 }

@@ -6,6 +6,7 @@ import com.wn.controller.room.vo.CreateRoomResultVO;
 import com.wn.controller.room.vo.RoomDetailVO;
 import com.wn.controller.room.vo.RoomPlayerVO;
 import com.wn.entity.R;
+import com.wn.service.exception.BusinessException;
 import com.wn.service.room.GameRoomService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -37,7 +38,7 @@ public class GameRoomController {
     @PostMapping("/create")
     public R createRoom(
             @RequestBody CreateRoomDTO dto,
-            @RequestHeader("userId") Long userId) {
+            @RequestHeader("userId") Long userId) throws BusinessException {
 
         String roomNo = gameRoomService.createRoom(
                 dto.getScriptId(), dto.getRoomName(), dto.getPassword(), userId
