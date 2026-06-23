@@ -20,9 +20,6 @@ public class OssConfig {
     @Value("${aliyun.oss.access-key-secret}")
     private String accessKeySecret;
 
-    @Value("${aliyun.oss.bucket-name}")
-    private String bucketName;
-
     @Bean(destroyMethod = "shutdown")//释放资源
     public OSS ossClient() {
         return new OSSClientBuilder().build(endpoint, accessKeyId, accessKeySecret);
