@@ -34,7 +34,7 @@ public class NpcDialogueController {
                   @RequestParam Long npcRoleId,
                   @RequestParam Long userId,
                   @RequestParam String message) {
-        String reply = npcDialogueService.chat(roomId, npcRoleId, userId, message);
+        String reply = npcDialogueService.chat(roomId, npcRoleId, userId, message).block();
         return new R(reply);
     }
 
