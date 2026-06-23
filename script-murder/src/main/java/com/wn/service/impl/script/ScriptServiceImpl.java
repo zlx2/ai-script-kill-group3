@@ -8,7 +8,9 @@ package com.wn.service.impl.script;
 
 import com.wn.entity.script.ScriptDto;
 import com.wn.entity.script.ScriptPO;
+import com.wn.entity.script.ScriptPOBackups;
 import com.wn.entity.script.ScriptSearchDTO;
+import com.wn.mapper.script.ScriptBackupsMapper;
 import com.wn.mapper.script.ScriptMapper;
 import com.wn.service.script.ScriptService;
 import jakarta.persistence.criteria.Predicate;
@@ -22,14 +24,15 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
-
 @Service
 public class ScriptServiceImpl implements ScriptService {
     @Autowired
     private ScriptMapper scriptMapper;
+    @Autowired
+    private ScriptBackupsMapper scriptBackupsMapper;
     @Override
     public void addScript(ScriptDto scriptDto) {
         //dto转po
@@ -112,7 +115,18 @@ public class ScriptServiceImpl implements ScriptService {
 
     @Override
     public void deleteScript(Long id) {
-        scriptMapper.deleteById( id);
+        //查询出要删除的剧本信息
+        ScriptPO backup = getById(id);
+        // 2. DTO/属性拷贝，转成备份实体，清空原有主键
+        ScriptPOBackups backupPO = new ScriptPOBackups();
+        // 复制业务字段，忽略原id
+        BeanUtils.copyProperties(backup, backupPO, "scriptId");
+        // 记录原始id、删除时间
+        backupPO.setOriginScriptId(backup.getScriptId());
+        //存到备份表
+        scriptBackupsMapper.save(backupPO);
+        // 删除
+        scriptMapper.deleteById(id);
     }
 
     @Override
