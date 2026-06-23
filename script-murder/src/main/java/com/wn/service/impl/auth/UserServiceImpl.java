@@ -16,9 +16,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 import java.security.SecureRandom;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -161,6 +159,20 @@ public class UserServiceImpl implements UserService {
         //5.把token和用户信息转成VO层 toUserVO:PO转VO
         return toUserVO(userInfoPO, refreshToken);
     }
+
+    @Override
+    public Userinfo getById(Long hostId) {
+        return userinfoMapper.findById(hostId).orElse(null);
+    }
+
+    @Override
+    public List<Userinfo> listByIds(List<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return userinfoMapper.findAllById(userIds);
+    }
+
     //创建返回的token
     private String generateRefreshToken(Userinfo userInfoPO) {
         //生成一个jwt，存入用户名和id
