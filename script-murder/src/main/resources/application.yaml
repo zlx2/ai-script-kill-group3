@@ -32,6 +32,7 @@ agentscope:
     model-name: deepseek-chat
     temperature: 0.7
     max-tokens: 4096
+    timeout: 300000
 
   # 配置Agent会话的存储方式
   session:

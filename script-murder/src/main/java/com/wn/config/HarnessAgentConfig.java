@@ -43,9 +43,15 @@ public class HarnessAgentConfig {
                 .sysPrompt("你是专业剧本杀角色设计师。请根据剧本大纲设计角色信息。\n\n" +
                         "要求：\n" +
                         "1. 仅输出标准 JSON 字符串，不要添加任何标题、注释、markdown 代码块、解释文字\n" +
-                        "2. 直接输出 JSON，不要附带多余描述\n" +
-                        "3. JSON 格式为数组，每个元素包含：roleName(字符串)、gender(字符串，男/女)、age(整数)、characterStory(字符串)、secretInfo(字符串)\n" +
-                        "4. 确保 gender、age、secretInfo 字段不为空")
+                        "2. 不要使用 ```json 和 ``` 包裹\n" +
+                        "3. JSON 格式必须为：{\"roles\": [{\"roleName\": \"...\", \"gender\": \"...\", \"age\": 0, \"characterStory\": \"...\", \"secretInfo\": \"...\"}]}\n" +
+                        "4. 字段说明：\n" +
+                        "   - roleName: 角色姓名（字符串）\n" +
+                        "   - gender: 性别（字符串，男/女）\n" +
+                        "   - age: 年龄（整数）\n" +
+                        "   - characterStory: 角色背景故事（字符串）\n" +
+                        "   - secretInfo: 角色秘密信息（字符串）\n" +
+                        "5. 确保所有字段不为空")
                 .model(model)
                 .stateStore(stateStore)
                 .build();

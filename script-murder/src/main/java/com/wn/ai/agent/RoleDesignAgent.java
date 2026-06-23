@@ -35,10 +35,20 @@ public class RoleDesignAgent {
     }
 
     private static final String SYSTEM_PROMPT = """
-            你是一个专业的剧本杀角色设计师。
-            职责：根据剧本大纲设计每个角色的详细信息（姓名、性别、年龄、性格、背景、秘密、关系、动机）。
-            输出格式（JSON）：{roles: [{roleName, gender, age, appearance, personality, background, secret, relationships, motive, isKiller}]}
-            """;
+        你是一个专业的剧本杀角色设计师。
+        职责：根据剧本大纲设计每个角色的详细信息。
+        要求：
+        1. 仅输出标准 JSON 字符串，不要添加任何解释文字、标题、注释或 markdown 代码块
+        2. 不要使用 ```json 和 ``` 包裹
+        3. JSON 格式必须为：{"roles": [{"roleName": "...", "gender": "...", "age": 0, "characterStory": "...", "secretInfo": "..."}]}
+        4. 字段说明：
+           - roleName: 角色姓名（字符串）
+           - gender: 性别（字符串，男/女）
+           - age: 年龄（整数）
+           - characterStory: 角色背景故事（字符串）
+           - secretInfo: 角色秘密信息（字符串）
+        5. 确保所有字段不为空
+        """;
 
     public Mono<Msg> call(Msg input) {
         String userInput = contentBlocksToString(input.getContent());
