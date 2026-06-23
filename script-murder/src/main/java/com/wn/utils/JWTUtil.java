@@ -19,7 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class JWTUtil {
     public static final String SECRET_KEY = "myh123456"; //秘钥
-    public static final long TOKEN_EXPIRE_TIME = 30 * 60 * 1000*24; //token过期时间
+    public static final long TOKEN_EXPIRE_TIME = 60 * 60 * 1000; //token过期时间60min
     private static final String ISSUER = "woniuxy"; //签发人
     /**    生成签名     */
     public static String generateToken(String username,Long userId){
