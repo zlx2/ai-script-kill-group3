@@ -14,6 +14,9 @@ import java.util.Date;
  * @DateTime: 26/03/10/星期二 13:47
  * @Component: 成都蜗牛学苑
  **/
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 public class JWTUtil {
     public static final String SECRET_KEY = "myh123456"; //秘钥
     public static final long TOKEN_EXPIRE_TIME = 30 * 60 * 1000*24; //token过期时间
@@ -57,10 +60,13 @@ public class JWTUtil {
         }
         return "";
     }
-    /**   从token获取uname     */
+    /**   从token获取id    */
     public static Long getUserId(String token){
         try{
-            return JWT.decode(token).getClaim("userId").asLong();
+            Long userId = JWT.decode(token).getClaim("userId").asLong();
+            String username = JWT.decode(token).getClaim("username").asString();
+            log.info("解析出的 userId：{}，username：{}", userId, username);
+            return userId;
         }catch(Exception ex){
             ex.printStackTrace();
         }

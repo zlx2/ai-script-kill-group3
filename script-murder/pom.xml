@@ -31,6 +31,12 @@
         <agentscope.version>2.0.0-RC1</agentscope.version>
     </properties>
     <dependencies>
+        <!--     引入aliyun oss依赖   -->
+        <dependency>
+            <groupId>com.aliyun.oss</groupId>
+            <artifactId>aliyun-sdk-oss</artifactId>
+            <version>3.17.4</version>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>

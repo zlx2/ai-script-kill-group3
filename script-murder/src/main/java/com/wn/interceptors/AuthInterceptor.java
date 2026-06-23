@@ -1,4 +1,4 @@
-package com.interceptors;
+package com.wn.interceptors;
 
 
 import com.wn.entity.user.Userinfo;
@@ -30,8 +30,10 @@ public class AuthInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        log.info("======= AuthInterceptor 拦截到请求：{} =======", request.getRequestURI());
         //1.获取前端request传入的 请求头的某个值 refreshToken
         String refreshToken = request.getHeader("refreshToken");
+        log.info("获取到的 refreshToken：{}", refreshToken);
         //2.通过redis获取JWT
         if (refreshToken == null){
             //抛出未认证异常
@@ -39,6 +41,7 @@ public class AuthInterceptor implements HandlerInterceptor {
         }
         //刷新 Redis 中的 token
         String jwt = (String) redisTemplate.opsForHash().get(refreshToken, "token");
+        log.info("从 Redis 查到的 jwt：{}", jwt);
         if (jwt == null){
             throw GlobalException.unauthorized();
         }
