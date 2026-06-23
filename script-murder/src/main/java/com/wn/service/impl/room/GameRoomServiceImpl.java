@@ -1,9 +1,3 @@
-/**
- * @Author: 鱼
- * @Description:
- * @DateTime: 2026/6/22 17:21
- * @Component:
- **/
 package com.wn.service.impl.room;
 
 import com.wn.controller.enums.room.GameStageEnum;
@@ -48,7 +42,7 @@ public class GameRoomServiceImpl implements GameRoomService {
      */
     @Override
     public String createRoom(Long scriptId, String roomName, String password, Long userId) throws BusinessException {
-       // 校验是否有剧本
+        // 校验是否有剧本
         ScriptPO script = scriptService.getById(scriptId);
         if (script == null || script.getStatus() != 1) {
             throw new BusinessException("剧本不存在或已下架");
@@ -85,7 +79,7 @@ public class GameRoomServiceImpl implements GameRoomService {
         // 5. 缓存,MySQL 数据库插入房间成功后，立刻同步一份副本到 Redis。
         cacheRoomInfo(room);
 
-       return roomNo;
+        return roomNo;
 
     }
 
@@ -153,7 +147,7 @@ public class GameRoomServiceImpl implements GameRoomService {
             vo.setScriptType(script.getScriptType());
             vo.setPlayerCount(script.getPlayerCount());
         }
-       //查询房主用户信息，填充房主展示字段
+        //查询房主用户信息，填充房主展示字段
         Userinfo host = userService.getById(room.getHostId());
         if (host != null) {
             vo.setHostNickname(host.getNickname());

@@ -5,6 +5,8 @@ package com.wn.service.auth;
 
 import com.wn.controller.auth.dto.UserinfoDTO;
 import com.wn.controller.auth.vo.UserinfoVO;
+import com.wn.entity.script.ScriptDto;
+import com.wn.entity.script.ScriptPO;
 import com.wn.entity.user.Userinfo;
 
 import java.util.List;
@@ -21,4 +23,5 @@ public interface UserService {
     Userinfo getById(Long hostId);
 
     List<Userinfo> listByIds(List<Long> userIds);
+
 }

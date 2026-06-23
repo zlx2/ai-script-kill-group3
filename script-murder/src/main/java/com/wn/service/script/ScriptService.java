@@ -8,6 +8,8 @@ import org.springframework.data.domain.Page;
 public interface ScriptService {
     void addScript(ScriptDto scriptDto);
 
+    ScriptPO addScriptAndReturn(ScriptDto scriptDto);
+
     Page<ScriptPO> searchScript(ScriptSearchDTO scriptSearchDTO);
 
     void updataScript(ScriptDto scriptDto);

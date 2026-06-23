@@ -38,9 +38,10 @@ public class ScriptController {
     }
     @PostMapping("/add")
     public R add(@RequestBody ScriptDto scriptDto){
-        scriptService.addScript(scriptDto);
-        return R.SUCCESS;
+        ScriptPO saved = scriptService.addScriptAndReturn(scriptDto);
+        return new R(saved.getScriptId());  // ✅ 返回 scriptId
     }
+
     @PutMapping("/update")
     public R update(@RequestBody ScriptDto scriptDto){
         scriptService.updataScript(scriptDto);

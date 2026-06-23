@@ -24,7 +24,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 @Service
@@ -41,13 +40,18 @@ public class ScriptServiceImpl implements ScriptService {
     }
 
     @Override
+    public ScriptPO addScriptAndReturn(ScriptDto scriptDto) {
+        ScriptPO scriptPO = dto2PO(scriptDto);
+        return scriptMapper.save(scriptPO);
+    }
+
+    @Override
     public Page<ScriptPO> searchScript(ScriptSearchDTO dto) {
         // 1. 动态拼接查询条件
         Specification<ScriptPO> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             // 固定条件：已上架、未删除
             predicates.add(cb.equal(root.get("status"), (byte) 1));
-            predicates.add(cb.equal(root.get("deleted"), (byte) 0));
 
             // 条件1：剧本类型
             if (dto.getScriptType() != null && !dto.getScriptType().isBlank()) {
@@ -139,4 +143,5 @@ public class ScriptServiceImpl implements ScriptService {
         BeanUtils.copyProperties(scriptDto,scriptPO);
         return scriptPO;
     }
+
 }
