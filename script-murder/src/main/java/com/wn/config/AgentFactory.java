@@ -8,7 +8,7 @@ import io.agentscope.core.model.OpenAIChatModel;
 import io.agentscope.core.state.AgentStateStore;
 import org.springframework.stereotype.Component;
 
-@Component
+//@Component
 public class AgentFactory {
 
     private final ScriptMasterAgent scriptMasterAgent;

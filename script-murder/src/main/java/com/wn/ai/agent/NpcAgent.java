@@ -4,24 +4,23 @@ package com.wn.ai.agent;
  * @Author: 杜江
  * @Description:
  * @DateTime: 2026/6/22 17:32
- * @Component:
+ * // @Component:
  **/
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Component;
 
 import io.agentscope.core.event.AgentEvent;
 import io.agentscope.core.message.ContentBlock;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.TextBlock;
-
 import io.agentscope.harness.agent.HarnessAgent;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * NPC对话Agent

@@ -58,7 +58,7 @@ public class ScriptDbTools {
      *
      * 整个过程是自动的，你只需要写工具方法就行。
      */
-//    @Tool(name = "queryReferenceScripts", description = "根据类型查询参考剧本，用于生成新剧本时参考")
+@Tool(name = "queryReferenceScripts", description = "根据类型查询参考剧本，用于生成新剧本时参考")
     public String queryReferenceScripts(String scriptType, int limit) {
         List<ScriptInfo> scripts = scriptInfoService.lambdaQuery()
                 .eq(ScriptInfo::getScriptType, scriptType)

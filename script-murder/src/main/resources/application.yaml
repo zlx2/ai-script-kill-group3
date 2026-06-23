@@ -20,14 +20,12 @@ spring:
 
 agentscope:
   # 配置大模型的连接信息，AgentScope支持同时配置多个模型
-  model:
-    # 默认使用的模型
-    default-model:deepseek
+  model: default-model:deepseek
 
   # DeepSeek配置（兼容OpenAI协议）
   deepseek:
     type: openai
-    api-key: ${DEEPSEEK_API_KEY}
+    api-key: ${DASHSCOPE_API_KEY}
     base-url: https://api.deepseek.com/v1
     model-name: deepseek-chat
     temperature: 0.7
@@ -51,3 +49,7 @@ agentscope:
 
 server:
   port: 8080
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.wn.entity
