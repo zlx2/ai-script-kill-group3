@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class ScriptServiceImpl implements ScriptService {
@@ -95,6 +96,28 @@ public class ScriptServiceImpl implements ScriptService {
 
         // 4. 分页查询
         return scriptMapper.findAll(spec, pageable);
+    }
+
+    @Override
+    public void updataScript(ScriptDto scriptDto) {
+        // DTO转PO
+        ScriptPO scriptPO = dto2PO(scriptDto);
+        // 校验ID不能为空（修改必须携带主键）
+        if (scriptPO.getScriptId() == null) {
+            throw new RuntimeException("修改脚本必须传入id");
+        }
+        // 根据id全量更新
+        scriptMapper.save(scriptPO);
+    }
+
+    @Override
+    public void deleteScript(Long id) {
+        scriptMapper.deleteById( id);
+    }
+
+    @Override
+    public ScriptPO getById(Long id) {
+        return scriptMapper.findOneByScriptId(id);
     }
 
     private ScriptPO dto2PO(ScriptDto scriptDto) {
