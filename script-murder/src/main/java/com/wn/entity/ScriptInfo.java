@@ -3,7 +3,10 @@ package com.wn.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * @Author: 杜江
@@ -12,6 +15,9 @@ import lombok.Data;
  * @Component:
  **/
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @TableName("script_info")
 public class ScriptInfo {
     @TableId(type = IdType.AUTO)
@@ -22,4 +28,7 @@ public class ScriptInfo {
     private Integer status;
     private String characterStory;
     private String secretInfo;
+    private String theme;
+    private Integer playerCount;
+    private String outline;
 }

@@ -3,7 +3,10 @@ package com.wn.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * @Author: 杜江
@@ -12,6 +15,9 @@ import lombok.Data;
  * @Component:
  **/
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @TableName("script_role")
 public class ScriptRole {
     @TableId(type = IdType.AUTO)
