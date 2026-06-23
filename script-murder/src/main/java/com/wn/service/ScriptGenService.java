@@ -300,30 +300,40 @@ public class ScriptGenService {
             return "";
         }
 
-        // 去除 Markdown 标题 (#, ##, ### 等)
-        content = content.replaceAll("^#{1,6}\\s+", "");
-
         // 去除 markdown 代码块标记（```json 或 ```）
         content = content.replaceAll("```json\\s*", "");
         content = content.replaceAll("```\\s*", "");
 
+        // 去除所有 Markdown 标题（#开头的行）
+        content = content.replaceAll("(?m)^#.*$", "");
+
         // 去除首尾空格和换行
         content = content.trim();
 
-        // 查找 JSON 数组的起始和结束位置
+        // 查找第一个 [ 和对应的 ]（支持嵌套）
         int startIndex = content.indexOf('[');
-        int endIndex = content.lastIndexOf(']');
-
-        if (startIndex >= 0 && endIndex >= startIndex) {
-            return content.substring(startIndex, endIndex + 1);
+        if (startIndex >= 0) {
+            int bracketCount = 0;
+            for (int i = startIndex; i < content.length(); i++) {
+                if (content.charAt(i) == '[') bracketCount++;
+                if (content.charAt(i) == ']') bracketCount--;
+                if (bracketCount == 0) {
+                    return content.substring(startIndex, i + 1);
+                }
+            }
         }
 
-        // 如果找不到数组，尝试找对象
+        // 如果找不到数组，查找第一个 { 和对应的 }（支持嵌套）
         startIndex = content.indexOf('{');
-        endIndex = content.lastIndexOf('}');
-
-        if (startIndex >= 0 && endIndex >= startIndex) {
-            return content.substring(startIndex, endIndex + 1);
+        if (startIndex >= 0) {
+            int braceCount = 0;
+            for (int i = startIndex; i < content.length(); i++) {
+                if (content.charAt(i) == '{') braceCount++;
+                if (content.charAt(i) == '}') braceCount--;
+                if (braceCount == 0) {
+                    return content.substring(startIndex, i + 1);
+                }
+            }
         }
 
         return content;
