@@ -67,7 +67,7 @@ public class RoomPO {
     private Long scriptId;
 
     /**
-     * 主持人用户ID
+     * 主持人（房主）用户ID
      */
     @Column(name = "host_id", nullable = false)
     private Long hostId;
