@@ -31,9 +31,24 @@ public class ScriptController {
         PageVO<ScriptPO> pageVO = PageVO.convert(scriptList);
         return new R(pageVO);
     }
+    @GetMapping("/{id}")
+    public R get(@PathVariable Long id){
+        ScriptPO scriptPO = scriptService.getById(id);
+        return new R(scriptPO);
+    }
     @PostMapping("/add")
     public R add(@RequestBody ScriptDto scriptDto){
         scriptService.addScript(scriptDto);
+        return R.SUCCESS;
+    }
+    @PutMapping("/update")
+    public R update(@RequestBody ScriptDto scriptDto){
+        scriptService.updataScript(scriptDto);
+        return R.SUCCESS;
+    }
+    @DeleteMapping("/{id}")
+    public R delete(@PathVariable Long id){
+        scriptService.deleteScript(id);
         return R.SUCCESS;
     }
 }

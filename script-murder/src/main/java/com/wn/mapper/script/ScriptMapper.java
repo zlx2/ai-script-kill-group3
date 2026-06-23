@@ -13,5 +13,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ScriptMapper extends JpaRepository<ScriptPO, Long> , JpaSpecificationExecutor<ScriptPO> {
-
+    ScriptPO findOneByScriptId(Long id);
 }

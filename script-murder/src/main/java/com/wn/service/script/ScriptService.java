@@ -9,4 +9,10 @@ public interface ScriptService {
     void addScript(ScriptDto scriptDto);
 
     Page<ScriptPO> searchScript(ScriptSearchDTO scriptSearchDTO);
+
+    void updataScript(ScriptDto scriptDto);
+
+    void deleteScript(Long id);
+
+    ScriptPO getById(Long id);
 }

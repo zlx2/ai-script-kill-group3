@@ -16,10 +16,10 @@ import java.time.LocalDateTime;
 
 @Data
 @Entity
-@Table(name = "script_info")
+@Table(name = "script_info_backups")
 @DynamicInsert
 @DynamicUpdate
-public class ScriptPO {
+public class ScriptPOBackups {
     /**
      * 剧本ID 自增主键
      */
@@ -27,6 +27,8 @@ public class ScriptPO {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "script_id", nullable = false)
     private Long scriptId;
+    // 新增字段：原数据id、删除时间、删除操作人
+    private Long originScriptId;
 
     /**
      * 剧本名称
@@ -135,6 +137,7 @@ public class ScriptPO {
      */
     @Column(name = "update_time")
     private LocalDateTime updateTime;
+
 
     /**
      * 自动填充创建/更新时间，配合 @PrePersist @PreUpdate
