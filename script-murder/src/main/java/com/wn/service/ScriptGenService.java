@@ -148,7 +148,6 @@ public class ScriptGenService {
 
     private void saveRoles(Long scriptId, String rolesJson) {
         try {
-            // 清洗 JSON，去除 Markdown 冗余内容
             String cleanJson = extractPureJson(rolesJson);
 
             if (cleanJson.isEmpty()) {
@@ -162,27 +161,71 @@ public class ScriptGenService {
                 return;
             }
 
+            log.info("解析角色JSON: {}", cleanJson);
+
             JsonNode root = objectMapper.readTree(cleanJson);
             if (root.isArray()) {
                 for (JsonNode roleNode : root) {
+                    // 获取字段值，同时支持 camelCase 和 snake_case
+                    String roleName = getJsonText(roleNode, "roleName", "role_name", "name", "未知角色");
+                    String gender = getJsonText(roleNode, "gender", "性别", "未知");
+                    int age = getJsonInt(roleNode, "age", "年龄", "0");
+                    String characterStory = getJsonText(roleNode, "characterStory", "character_story", "characterStory", "character story", "角色故事", "background", "背景", "");
+                    String secretInfo = getJsonText(roleNode, "secretInfo", "secret_info", "secret info", "secretInfo", "秘密", "secret", "");
+                    // 清理角色名字中的问号和特殊字符
+                    roleName = roleName.replaceAll("[\"'？?]", "");
+
                     ScriptRole role = ScriptRole.builder()
                             .scriptId(scriptId)
-                            .roleName(roleNode.hasNonNull("roleName") ? roleNode.get("roleName").asText("未知角色") : "未知角色")
-                            .gender(roleNode.hasNonNull("gender") ? roleNode.get("gender").asText("未知") : "未知")
-                            .age(roleNode.hasNonNull("age") ? roleNode.get("age").asInt(0) : 0)
-                            .characterStory(roleNode.hasNonNull("characterStory") ? roleNode.get("characterStory").asText("") : "")
-                            .secretInfo(roleNode.hasNonNull("secretInfo") ? roleNode.get("secretInfo").asText("") : "")
+                            .roleName(roleName)
+                            .gender(gender)
+                            .age(age)
+                            .characterStory(characterStory)
+                            .secretInfo(secretInfo)
                             .build();
                     scriptRoleMapper.insert(role);
+
+                    log.info("保存角色: roleName={}, gender={}, age={}, characterStoryLength={}, secretInfoLength={}",
+                            roleName, gender, age,
+                            characterStory != null ? characterStory.length() : 0,
+                            secretInfo != null ? secretInfo.length() : 0);
                 }
+            } else if (root.has("roles") && root.get("roles").isArray()) {
+                // ★ 新增情况2：JSON是对象，且有roles字段，值是数组 → 提取roles数组再遍历
+                JsonNode rolesArray = root.get("roles");
+                for (JsonNode roleNode : rolesArray) {
+                    String roleName = getJsonText(roleNode, "roleName", "role_name", "name", "未知角色");
+                    String gender = getJsonText(roleNode, "gender", "性别", "未知");
+                    int age = getJsonInt(roleNode, "age", "年龄", "0");
+                    String characterStory = getJsonText(roleNode, "characterStory", "character_story", "characterStory", "character story", "角色故事", "");
+                    String secretInfo = getJsonText(roleNode, "secretInfo", "secret_info", "secret info", "secretInfo", "秘密", "");
+
+                    roleName = roleName.replaceAll("[\"'？?]", "");
+
+                    ScriptRole role = ScriptRole.builder()
+                            .scriptId(scriptId)
+                            .roleName(roleName)
+                            .gender(gender)
+                            .age(age)
+                            .characterStory(characterStory)
+                            .secretInfo(secretInfo)
+                            .build();
+                    scriptRoleMapper.insert(role);
+
+                    log.info("保存角色: roleName={}, gender={}, age={}, characterStoryLength={}, secretInfoLength={}",
+                            roleName, gender, age,
+                            characterStory != null ? characterStory.length() : 0,
+                            secretInfo != null ? secretInfo.length() : 0);
+                }
+
             } else {
+                // 情况3：其他格式 → 保存原始文本（备用）
                 log.warn("JSON不是数组格式，保存原始文本");
                 ScriptRole role = ScriptRole.builder()
                         .scriptId(scriptId)
                         .roleName("角色列表")
                         .characterStory(rolesJson)
                         .build();
-                scriptRoleMapper.insert(role);
             }
         } catch (Exception e) {
             log.warn("解析角色JSON失败，保存原始文本", e);
@@ -193,6 +236,35 @@ public class ScriptGenService {
                     .build();
             scriptRoleMapper.insert(role);
         }
+    }
+
+    private String getJsonText(JsonNode node, String... possibleNames) {
+        for (String name : possibleNames) {
+            if (node.hasNonNull(name)) {
+                return node.get(name).asText();
+            }
+        }
+        return "";
+    }
+
+    private int getJsonInt(JsonNode node, String... possibleNames) {
+        for (String name : possibleNames) {
+            if (node.hasNonNull(name)) {
+                try {
+                    return node.get(name).asInt();
+                } catch (Exception e) {
+                    // 尝试解析字符串中的数字
+                    String value = node.get(name).asText();
+                    if (value != null && !value.isEmpty()) {
+                        try {
+                            return Integer.parseInt(value.replaceAll("[^0-9]", ""));
+                        } catch (NumberFormatException ignored) {
+                        }
+                    }
+                }
+            }
+        }
+        return 0;
     }
 
     public AiScriptTask getTaskStatus(Long taskId) {
