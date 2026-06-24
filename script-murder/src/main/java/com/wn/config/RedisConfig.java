@@ -1,9 +1,8 @@
 package com.wn.config;
 
-
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -29,34 +28,29 @@ public class RedisConfig {
 
     @Bean
     public JedisPooled jedisPooled(){
-        return new JedisPooled(host,port,null,password);
+        return new JedisPooled(host, port, null, password);
     }
+
     @Bean
-    public RedisTemplate<String,Object> redisTemplate(RedisConnectionFactory redisConnectionFactory){
-        //1.构建实例
-        RedisTemplate<String,Object> redisTemplate = new RedisTemplate<>();
-        //2.注册工厂
+    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
+        RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
         redisTemplate.setConnectionFactory(redisConnectionFactory);
-        //3.配置string类型的序列化方案
+
         redisTemplate.setKeySerializer(RedisSerializer.string());
-        //3.1 对象也会参与序列化 GenericJackson2JsonRedisSerializer ---> 存入redis中，会带上Class信息。{class:"com.woniuxy.entity.User"}
-        //上面这个就可以直接返回你的对象出来。（自动反序列化）
-//        new Jackson2JsonRedisSerializer<>(); --->{json对象}--->ObjectMapper JSON解析对象,返回的对象是 LinkedHashMap
-        Jackson2JsonRedisSerializer<Object> serializer = new Jackson2JsonRedisSerializer<>(Object.class);
+        redisTemplate.setHashKeySerializer(RedisSerializer.string());
+
+        // ✅ 配置 ObjectMapper 支持 LocalDateTime
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
-        objectMapper.setDateFormat(new SimpleDateFormat(" yyyy-MM-dd HH:mm:ss"));
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
-//        serializer.setObjectMapper(objectMapper);
+        // ✅ 使用 GenericJackson2JsonRedisSerializer（推荐，支持自动类型）
+        GenericJackson2JsonRedisSerializer serializer = new GenericJackson2JsonRedisSerializer(objectMapper);
 
         redisTemplate.setValueSerializer(serializer);
-        //3.2 hash也需要配置
-        redisTemplate.setHashKeySerializer(RedisSerializer.string());
-        redisTemplate.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
+        redisTemplate.setHashValueSerializer(serializer);
+
+        redisTemplate.afterPropertiesSet();
         return redisTemplate;
     }
-
-
-
-
 }

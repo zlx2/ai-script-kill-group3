@@ -12,7 +12,7 @@ import java.util.List;
 
 @Data
 public class RoomDetailVO {
-    private Long roomId;//房间ID
+    private String roomId;//房间ID
     private String roomNo;//房间短编号
     private String roomName;//房间自定义名称
     private Integer roomStatus;//房间状态

@@ -21,7 +21,7 @@ import java.util.List;
  * @Component: room模块控制器
  **/
 @RestController
-@RequestMapping("/room")
+@RequestMapping("/api/room")
 @RequiredArgsConstructor
 public class GameRoomController {
 

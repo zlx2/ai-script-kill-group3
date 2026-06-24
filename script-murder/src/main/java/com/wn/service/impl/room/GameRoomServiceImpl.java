@@ -71,7 +71,7 @@ public class GameRoomServiceImpl implements GameRoomService {
         RoomPlayerPO player = new RoomPlayerPO();
         player.setRoomId(room.getRoomId());
         player.setUserId(userId);
-        player.setIsReady((byte) 0);
+        player.setIsReady((byte) 1);
         player.setIsHost((byte) 1);
         player.setJoinTime(LocalDateTime.now());
         roomPlayerMapper.save(player);
@@ -138,8 +138,19 @@ public class GameRoomServiceImpl implements GameRoomService {
      */
     private RoomDetailVO buildRoomDetailVO(RoomPO room) {
         RoomDetailVO vo = new RoomDetailVO();
-        BeanUtils.copyProperties(room, vo);
-        //查询剧本信息，填充剧本展示字段
+
+        // ✅ 手动设置所有字段（不依赖 BeanUtils.copyProperties）
+        vo.setRoomId(room.getRoomId());
+        vo.setRoomNo(room.getRoomNo());
+        vo.setRoomName(room.getRoomName());
+        vo.setRoomStatus(room.getRoomStatus() != null ? (int) room.getRoomStatus() : 0);
+        vo.setCurrentStage(room.getCurrentStage());
+        vo.setCurrentRound(room.getCurrentRound());
+        vo.setScriptId(room.getScriptId());
+        vo.setHostId(room.getHostId());
+        vo.setHasPassword(room.getPassword() != null && !room.getPassword().isEmpty());
+
+        // 查询剧本信息
         ScriptPO script = scriptService.getById(room.getScriptId());
         if (script != null) {
             vo.setScriptName(script.getScriptName());
@@ -147,16 +158,20 @@ public class GameRoomServiceImpl implements GameRoomService {
             vo.setScriptType(script.getScriptType());
             vo.setPlayerCount(script.getPlayerCount());
         }
-        //查询房主用户信息，填充房主展示字段
+
+        // 查询房主用户信息
         Userinfo host = userService.getById(room.getHostId());
         if (host != null) {
             vo.setHostNickname(host.getNickname());
             vo.setHostAvatar(host.getAvatar());
         }
-        //查询玩家信息，填充玩家展示字段
-        vo.setPlayers(getRoomPlayers(room.getRoomId()));
-        //标识房间是否有密码
-        vo.setHasPassword(room.getPassword() != null && !room.getPassword().isEmpty());
+
+        // 查询玩家列表
+        List<RoomPlayerVO> players = getRoomPlayers(room.getRoomId());
+        vo.setPlayers(players);
+
+        // ✅ 用实际玩家数量修正 currentPlayer
+        vo.setCurrentPlayer(players != null ? players.size() : 0);
 
         return vo;
     }
@@ -288,13 +303,19 @@ public class GameRoomServiceImpl implements GameRoomService {
             throw new BusinessException("还有玩家未准备");
         }
 
-        room.setRoomStatus(RoomStatusEnum.PLAYING.getCode());
+        // ✅ 更新房间状态
+        room.setRoomStatus(RoomStatusEnum.PLAYING.getCode());  // 1
         room.setCurrentStage(GameStageEnum.READING.getCode());
         room.setCurrentRound(1);
         room.setStartTime(LocalDateTime.now());
+
+        // ✅ 保存到数据库
         roomMapper.save(room);
 
+        // ✅ 更新缓存
         cacheRoomInfo(room);
+
+        System.out.println("游戏已开始，房间ID：" + roomId + "，状态：" + room.getRoomStatus());
     }
     /**
      * 获取房间玩家列表

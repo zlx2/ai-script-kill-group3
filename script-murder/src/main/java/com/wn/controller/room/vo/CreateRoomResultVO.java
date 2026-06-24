@@ -14,7 +14,7 @@ public class CreateRoomResultVO {
     /**
      * 房间ID，防止重复
      */
-    private Long roomId;
+    private String roomId;
 
     /**
      * 房间号，用户需要
