@@ -68,12 +68,23 @@ public class AiScriptGenServiceImpl implements AiScriptGenService {
                 updateProgress(task.getTaskId(), 1, 25);
 
                 String outline = generateScript(request).block();
-
                 log.info("AI返回的剧本大纲原始内容: {}", outline);
                 String cleanOutline = extractPureJson(outline);
                 log.info("提取后的JSON: {}", cleanOutline);
 
-                JSONObject outlineJson = JSON.parseObject(cleanOutline);
+                JSONObject outlineJson;
+                if (cleanOutline.trim().startsWith("[")) {
+                    // 如果是数组，取第一个元素
+                    JSONArray array = JSON.parseArray(cleanOutline);
+                    if (array.size() > 0) {
+                        outlineJson = array.getJSONObject(0);
+                    } else {
+                        log.error("JSON数组为空");
+                        throw new RuntimeException("剧本大纲生成失败：返回空数组");
+                    }
+                } else {
+                    outlineJson = JSON.parseObject(cleanOutline);
+                }
                 log.info("解析后的theme: {}", outlineJson.getString("theme"));
                 log.info("解析后的outline: {}", outlineJson.getString("outline"));
                 log.info("解析后的scriptName: {}", outlineJson.getString("scriptName"));
@@ -136,25 +147,19 @@ public class AiScriptGenServiceImpl implements AiScriptGenService {
     }
 
     private Mono<String> generateScript(ScriptGenRequest request) {
-        // 处理难度，默认中等
+        String skillContent = readSkillFile("skill/plot_design_skill.md");
         String difficulty = request.getDifficulty() != null ? request.getDifficulty() : "中等";
+
         String prompt = String.format("""
+                %s
+
                 用户需求：
                 主题：%s
                 类型：%s
                 人数：%d人
                 难度：%s
                 背景描述：%s
-
-                请根据以上需求，设计一个完整、精彩的剧本杀剧本大纲。
-                
-                要求：
-                1. 剧本要有深度和悬念，包含多重反转
-                2. 核心诡计要巧妙，逻辑严密
-                3. 人物关系要复杂，每个人都有秘密
-                4. 分幕设计要合理，节奏紧凑
-                5. 必须按照指定的JSON格式输出，不要添加任何解释文字
-                """, request.getTheme(), request.getScriptType(),
+                """, skillContent, request.getTheme(), request.getScriptType(),
                 request.getPlayerCount(), difficulty, request.getDescription());
 
         Msg msg = Msg.builder()
@@ -169,7 +174,14 @@ public class AiScriptGenServiceImpl implements AiScriptGenService {
     }
 
     private Mono<String> generateRoles(String outline) {
-        String prompt = "请根据以下剧本大纲设计角色信息：\n\n" + outline;
+        String skillContent = readSkillFile("skill/role_design_skill.md");
+
+        String prompt = String.format("""
+                %s
+
+                请根据以下剧本大纲设计角色信息：
+                %s
+                """, skillContent, outline);
 
         Msg msg = Msg.builder()
                 .content(TextBlock.builder().text(prompt).build())
@@ -180,6 +192,23 @@ public class AiScriptGenServiceImpl implements AiScriptGenService {
                         .filter(b -> b instanceof TextBlock)
                         .map(b -> ((TextBlock) b).getText())
                         .collect(java.util.stream.Collectors.joining("\n")));
+    }
+
+    private String readSkillFile(String filePath) {
+        try {
+            org.springframework.core.io.ClassPathResource resource =
+                    new org.springframework.core.io.ClassPathResource(filePath);
+            if (!resource.exists()) {
+                log.warn("Skill 文件不存在: {}", filePath);
+                return "";
+            }
+            try (java.io.InputStream is = resource.getInputStream()) {
+                return new String(is.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+            }
+        } catch (java.io.IOException e) {
+            log.error("读取 skill 文件失败: {}", filePath, e);
+            return "";
+        }
     }
 
     private void saveRoles(Long scriptId, String rolesJson) {
@@ -273,6 +302,13 @@ public class AiScriptGenServiceImpl implements AiScriptGenService {
                     return content.substring(startIndex, i + 1);
                 }
             }
+        }
+
+        // 如果找不到完整的JSON，尝试提取第一个对象
+        int firstBrace = content.indexOf('{');
+        int lastBrace = content.lastIndexOf('}');
+        if (firstBrace >= 0 && lastBrace > firstBrace) {
+            return content.substring(firstBrace, lastBrace + 1);
         }
 
         return content;
