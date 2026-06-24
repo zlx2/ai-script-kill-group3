@@ -27,58 +27,58 @@ public class SingleGameController {
 
     // 2. 玩家自选角色
     @PostMapping("/role/select")
-    public String selectRole(@RequestParam String roomId, @RequestParam String roleName) {
-        return gameService.selectRole(roomId, roleName);
+    public String selectRole(@RequestParam String roomId,
+                             @RequestParam String userId,
+                             @RequestParam String roleName) {
+        return gameService.selectRole(roomId, userId, roleName);
     }
 
-    // 3. DM分发私有线索给指定角色
-    @PostMapping("/dm/distributeClue")
-    public String distributeClue(@RequestParam String roomId,
-                                 @RequestParam String targetRole,
-                                 @RequestParam String clueId) {
-        return gameService.dmDistributePrivateClue(roomId, targetRole, clueId);
-    }
-
-    // 4. 角色自我介绍
+    // 3. 角色自我介绍
     @PostMapping("/intro")
-    public String selfIntro(@RequestParam String roomId, @RequestParam String roleName) {
-        return gameService.selfIntro(roomId, roleName);
+    public String selfIntro(@RequestParam String roomId,
+                            @RequestParam String userId,
+                            @RequestParam String roleName) {
+        return gameService.selfIntro(roomId, userId, roleName);
     }
 
-    // 5. 玩家搜证
+    // 4. 玩家搜证（唯一获取线索入口）
     @PostMapping("/search")
     public String search(@RequestParam String roomId,
+                         @RequestParam String userId,
                          @RequestParam String roleName,
                          @RequestParam String scene) {
-        return gameService.searchEvidence(roomId, roleName, scene);
+        return gameService.searchEvidence(roomId, userId, roleName, scene);
     }
 
-    // 6. 公聊发言（全局所有人可见）
+    // 5. 公聊发言（全局所有人可见）
     @PostMapping("/chat/public")
     public String publicChat(@RequestParam String roomId,
+                             @RequestParam String userId,
                              @RequestParam String roleName,
                              @RequestBody String content) {
-        return gameService.publicChat(roomId, roleName, content);
+        return gameService.publicChat(roomId, userId, roleName, content);
     }
 
-    // 7. 私聊发言（仅发送方、接收方私有记录可见）
+    // 6. 私聊发言（仅发送方、接收方私有记录可见）
     @PostMapping("/chat/private")
     public String privateChat(@RequestParam String roomId,
+                              @RequestParam String userId,
                               @RequestParam String sender,
                               @RequestParam String receiver,
                               @RequestBody String content) {
-        return gameService.privateChat(roomId, sender, receiver, content);
+        return gameService.privateChat(roomId, userId, sender, receiver, content);
     }
 
-    // 8. 玩家投票
+    // 7. 玩家投票
     @PostMapping("/vote")
     public String vote(@RequestParam String roomId,
+                       @RequestParam String userId,
                        @RequestParam String voter,
                        @RequestParam String targetRole) {
-        return gameService.voteSuspect(roomId, voter, targetRole);
+        return gameService.voteSuspect(roomId, userId, voter, targetRole);
     }
 
-    // 9. DM切换下一游戏阶段
+    // 8. DM切换下一游戏阶段
     @PostMapping("/nextStage")
     public String nextStage(@RequestParam String roomId) {
         return gameService.nextGameStage(roomId);
@@ -93,14 +93,18 @@ public class SingleGameController {
 
     // 获取当前角色私有对话+私有线索记录（仅本人）
     @GetMapping("/history/private")
-    public String getPrivateHistory(@RequestParam String roomId, @RequestParam String roleName) {
-        return gameService.getRolePrivateHistory(roomId, roleName);
+    public String getPrivateHistory(@RequestParam String roomId,
+                                    @RequestParam String userId,
+                                    @RequestParam String roleName) {
+        return gameService.getRolePrivateHistory(roomId, userId, roleName);
     }
 
     // 查询当前角色全部私有线索（前端线索面板）
     @GetMapping("/clue/my")
-    public List<String> getMyClues(@RequestParam String roomId, @RequestParam String roleName) {
-        return gameService.getRolePrivateClues(roomId, roleName);
+    public List<String> getMyClues(@RequestParam String roomId,
+                                   @RequestParam String userId,
+                                   @RequestParam String roleName) {
+        return gameService.getRolePrivateClues(roomId, userId, roleName);
     }
 
     // 查询房间已选择角色列表

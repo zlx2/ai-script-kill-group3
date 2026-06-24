@@ -6,11 +6,11 @@
  **/
 package com.wn.test;
 
-import com.wn.test.ScriptKillTools;
-import io.agentscope.core.ReActAgent;
+import io.agentscope.harness.agent.HarnessAgent;
 import io.agentscope.core.tool.Toolkit;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
 
 @Configuration
 public class AgentScopeConfig {
@@ -25,7 +25,7 @@ public class AgentScopeConfig {
 
     // DM主持人Agent，采用官方推荐字符串model id写法
     @Bean
-    public ReActAgent dmAgent(Toolkit scriptToolkit) {
+    public HarnessAgent dmAgent(Toolkit scriptToolkit) {
         String dmSystemPrompt = """
                 你是专业剧本杀DM，本局剧本设定：
                 死者：庄园主张老爷，死于密室书房，真正凶手是女仆小兰。
@@ -38,7 +38,7 @@ public class AgentScopeConfig {
                 4. 投票结束后汇总票数，完整复盘作案动机与密室手法。
                 说话简短口语化，分阶段引导游戏推进。
                 """;
-        return ReActAgent.builder()
+        return HarnessAgent.builder()
                 .name("script_dm_host")
                 // 官方推荐字符串modelId，自动读取配置里的dashscope.api-key
                 .model("dashscope:qwen-turbo")
@@ -48,27 +48,4 @@ public class AgentScopeConfig {
                 .build();
     }
 
-    /**
-     * 动态创建玩家Agent
-     * @param name 玩家昵称
-     * @param identity 角色身份
-     * @param secret 个人隐藏秘密
-     * @return 独立玩家ReActAgent
-     */
-    public ReActAgent createPlayerAgent(String name, String identity, String secret) {
-        String playerPrompt = String.format("""
-                你是剧本杀玩家【%s】，角色身份：%s，你的隐藏秘密：%s
-                行为规则：
-                1. 不要主动暴露自己的秘密；
-                2. 如果你是凶手，需要合理嫁祸其他嫌疑人；
-                3. 需要搜证时调用search_clue工具，投票阶段调用vote_suspect；
-                4. 发言简短自然，贴合自身角色人设。
-                """, name, identity, secret);
-        return ReActAgent.builder()
-                .name("player_" + name)
-                .model("dashscope:qwen-turbo")
-                .sysPrompt(playerPrompt)
-                .maxIters(10)
-                .build();
-    }
 }

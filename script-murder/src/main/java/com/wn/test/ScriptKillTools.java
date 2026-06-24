@@ -38,7 +38,7 @@ public class ScriptKillTools {
     private final Map<String, Set<String>> roomSearchedRecord = new ConcurrentHashMap<>();
 
     /**
-     * 搜证工具：自动区分公开/私有线索，存入角色私有线索库
+     * 搜证工具：唯一获取线索渠道
      */
     @Tool(
             name = "search_clue",
@@ -70,7 +70,6 @@ public class ScriptKillTools {
 
         String[] clueInfo = cluePool.get(clueId);
         String clueText = clueInfo[0];
-        String belongRole = clueInfo[1];
 
         // 存入当前角色私有线索
         Map<String, Set<String>> playerClueMap = roomPlayerClues.computeIfAbsent(roomId, k -> new ConcurrentHashMap<>());
@@ -79,26 +78,6 @@ public class ScriptKillTools {
         searchedSet.add(playerName);
 
         return playerName + " 搜证获得线索：" + clueText;
-    }
-
-    /**
-     * DM手动定向分发线索给指定角色
-     */
-    public String distributeClue(String roomId, String targetRole, String clueId) {
-        if (!cluePool.containsKey(clueId)) return "线索ID不存在";
-        String[] clueInfo = cluePool.get(clueId);
-        String clueText = clueInfo[0];
-        String belongRole = clueInfo[1];
-
-        // 私有线索校验归属
-        if (!"all".equals(belongRole) && !belongRole.equals(targetRole)) {
-            return "分发失败：该线索仅归属角色[" + belongRole + "]，不可分给" + targetRole;
-        }
-
-        Map<String, Set<String>> playerClueMap = roomPlayerClues.computeIfAbsent(roomId, k -> new ConcurrentHashMap<>());
-        Set<String> ownClues = playerClueMap.computeIfAbsent(targetRole, k -> ConcurrentHashMap.newKeySet());
-        ownClues.add(clueId);
-        return "DM分发线索至【" + targetRole + "】：" + clueText;
     }
 
     /**
