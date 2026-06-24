@@ -14,4 +14,5 @@ public class ScriptGenRequest {
     private String scriptType;
     private Integer playerCount;
     private String description;
+    private String difficulty;
 }

@@ -136,16 +136,26 @@ public class AiScriptGenServiceImpl implements AiScriptGenService {
     }
 
     private Mono<String> generateScript(ScriptGenRequest request) {
+        // 处理难度，默认中等
+        String difficulty = request.getDifficulty() != null ? request.getDifficulty() : "中等";
         String prompt = String.format("""
                 用户需求：
                 主题：%s
                 类型：%s
                 人数：%d人
-                描述：%s
+                难度：%s
+                背景描述：%s
 
-                请设计一个完整的剧本杀剧本大纲。
+                请根据以上需求，设计一个完整、精彩的剧本杀剧本大纲。
+                
+                要求：
+                1. 剧本要有深度和悬念，包含多重反转
+                2. 核心诡计要巧妙，逻辑严密
+                3. 人物关系要复杂，每个人都有秘密
+                4. 分幕设计要合理，节奏紧凑
+                5. 必须按照指定的JSON格式输出，不要添加任何解释文字
                 """, request.getTheme(), request.getScriptType(),
-                request.getPlayerCount(), request.getDescription());
+                request.getPlayerCount(), difficulty, request.getDescription());
 
         Msg msg = Msg.builder()
                 .content(TextBlock.builder().text(prompt).build())
