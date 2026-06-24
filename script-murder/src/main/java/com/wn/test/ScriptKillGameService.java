@@ -20,32 +20,36 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class ScriptKillGameService {
-    // 角色配置：角色名 = [对外公开身份, 隐藏秘密(凶手独有)]
+    // 角色基础配置：角色名 = [对外身份, 隐藏秘密]
     private final Map<String, String[]> ROLE_MAP = Map.of(
             "小兰", new String[]{"庄园女仆", "我深夜下毒杀死老爷，伪造密室"},
             "老李", new String[]{"合作商人", "死者欠我巨额欠款，我有杀人动机"},
             "老王", new String[]{"私人医生", "我仅提供普通安眠药，不含毒素"}
     );
 
-    // 游戏阶段枚举
+    // 游戏阶段
     public enum GameStage {
         OPEN, SELF_INTRO, SEARCH, DISCUSS, VOTE, REVIEW
     }
 
-    // 房间内存缓存
-    private final Map<String, StringBuilder> roomHistory = new ConcurrentHashMap<>();
-    public final Map<String, String> roomHumanRole = new ConcurrentHashMap<>();
+    // ========== 房间缓存隔离 ==========
+    // 1. 全局公聊历史：所有玩家都能看到（DM发言、公聊、公开搜证、投票）
+    private final Map<String, StringBuilder> roomGlobalChat = new ConcurrentHashMap<>();
+    // 2. 角色私有对话缓存：roomId -> 角色名 -> 私有记录（私有线索、私聊、专属DM消息）
+    private final Map<String, Map<String, StringBuilder>> roomPrivateChat = new ConcurrentHashMap<>();
+    // 3. 房间已被选择角色（防止重复选）
+    private final Map<String, Set<String>> roomSelectedRoles = new ConcurrentHashMap<>();
+    // 4. 当前游戏阶段
     private final Map<String, GameStage> roomStage = new ConcurrentHashMap<>();
+    // 5. 已完成自我介绍角色集合
     private final Map<String, Set<String>> roomIntroDone = new ConcurrentHashMap<>();
 
     @Resource
     private ReActAgent dmAgent;
     @Resource
-    private AgentScopeConfig agentConfig;
-    @Resource
     private ScriptKillTools scriptKillTools;
 
-    // DM统一对话封装
+    // DM基础调用封装
     private String dmCall(String roomId, String prompt) {
         Msg msg = Msg.builder()
                 .role(MsgRole.USER)
@@ -53,168 +57,171 @@ public class ScriptKillGameService {
                 .build();
         RuntimeContext ctx = RuntimeContext.builder().sessionId("room_" + roomId).build();
         String reply = dmAgent.call(List.of(msg), ctx).block().getTextContent();
-        recordHistory(roomId, "【DM】" + reply);
+        // DM全局消息存入公聊
+        recordGlobalChat(roomId, "【DM】" + reply);
         return reply;
     }
 
-    // 1. 开局初始化房间数据
-    public String startGame(String roomId, String humanRole) {
-        roomHistory.put(roomId, new StringBuilder());
-        roomHumanRole.put(roomId, humanRole);
+    // 1. 创建空房间，进入选角色阶段
+    public String startGame(String roomId) {
+        roomGlobalChat.put(roomId, new StringBuilder());
+        roomPrivateChat.put(roomId, new ConcurrentHashMap<>());
+        roomSelectedRoles.put(roomId, ConcurrentHashMap.newKeySet());
         roomStage.put(roomId, GameStage.OPEN);
         roomIntroDone.put(roomId, ConcurrentHashMap.newKeySet());
-        // 清空房间工具层缓存
         scriptKillTools.clearRoomAllData(roomId);
 
-        String openPrompt = """
-                你是剧本杀DM，只交代基础案件背景，不公布角色、不暴露凶手。
-                剧情：庄园主张老爷死于书房密室，茶杯检出毒素。
-                共三名嫌疑人，所有人完成自我介绍后进入搜证阶段。
-                当前阶段仅引导自我介绍，不发放线索。
+        String prompt = """
+                你是剧本杀DM，介绍案情：庄园主张老爷死于书房密室，茶杯检出氰化物毒素。
+                只进行简单的剧情背景介绍，不要透露凶手。
+                当前阶段玩家自主选择角色，可选：小兰、老李、老王，每个角色只能一人选择。
+                全部人选完角色后进入自我介绍阶段。
                 """;
-        String dmReply = dmCall(roomId, openPrompt);
-        roomStage.put(roomId, GameStage.SELF_INTRO);
-        return "游戏开局完成，当前阶段：自我介绍阶段\nDM：" + dmReply;
+        String dmReply = dmCall(roomId, prompt);
+        roomStage.put(roomId, GameStage.OPEN);
+        return "房间创建成功，当前阶段：角色选择阶段\nDM：" + dmReply;
     }
 
-    // 手动搜证接口（真人玩家调用）
-    public String searchEvidence(String roomId, String playerName, String scene) {
-        GameStage stage = roomStage.get(roomId);
-        if (!GameStage.SEARCH.equals(stage)) {
-            return "当前非搜证阶段，无法搜证";
-        }
-        String clueResult = scriptKillTools.searchClue(roomId, playerName, scene);
-        String record = String.format("【手动搜证-%s】%s", playerName, clueResult);
-        recordHistory(roomId, record);
-        return record;
+    // 玩家自选角色
+    public String selectRole(String roomId, String roleName) {
+        Set<String> validRoles = scriptKillTools.getAllValidRoles();
+        if (!validRoles.contains(roleName)) return "角色不存在，可选：" + validRoles;
+        Set<String> selected = roomSelectedRoles.get(roomId);
+        if (selected.contains(roleName)) return "该角色已被占用，请更换";
+
+        selected.add(roleName);
+        // 初始化该角色私有记录容器
+        roomPrivateChat.get(roomId).putIfAbsent(roleName, new StringBuilder());
+        String identity = ROLE_MAP.get(roleName)[0];
+        String log = String.format("【选角成功】%s 选择角色，身份：%s", roleName, identity);
+        recordGlobalChat(roomId, log);
+        return log;
     }
 
-    // 投票接口（真人调用）
-    public String voteSuspect(String roomId, String voterName, String targetRole) {
-        GameStage stage = roomStage.get(roomId);
-        if (!GameStage.VOTE.equals(stage)) {
-            return "当前非投票阶段，无法投票";
-        }
-        String voteResult = scriptKillTools.voteSuspect(roomId, voterName, targetRole);
-        recordHistory(roomId, "【投票-" + voterName + "】" + voteResult);
-        return voteResult;
+    // ========== DM操作：分发私有线索（存入目标角色私有记录） ==========
+    public String dmDistributePrivateClue(String roomId, String targetRole, String clueId) {
+        Set<String> roomRoles = roomSelectedRoles.get(roomId);
+        if (!roomRoles.contains(targetRole)) return "目标角色未选择，无法分发线索";
+
+        String result = scriptKillTools.distributeClue(roomId, targetRole, clueId);
+        // 私有线索仅写入该角色私有历史，不进全局公聊
+        recordPrivateChat(roomId, targetRole, "【DM专属线索】" + result);
+        // 全局仅记录分发行为摘要，不泄露线索内容
+        recordGlobalChat(roomId, "【DM操作】向" + targetRole + "分发专属线索");
+        return result;
     }
 
-    // 角色自我介绍
-    public String roleSelfIntro(String roomId, String roleName) {
+    // ========== 搜证（公开线索进全局，私有线索仅存入角色私有记录） ==========
+    public String searchEvidence(String roomId, String roleName, String scene) {
         GameStage stage = roomStage.get(roomId);
-        if (!GameStage.SELF_INTRO.equals(stage)) {
-            return "当前非自我介绍阶段，无法自我介绍";
+        if (!GameStage.SEARCH.equals(stage)) return "当前非搜证阶段";
+        Set<String> roomRoles = roomSelectedRoles.get(roomId);
+        if (!roomRoles.contains(roleName)) return "请先选择角色再搜证";
+
+        String clueResult = scriptKillTools.searchClue(roomId, roleName, scene);
+        String clueText = clueResult.split("搜到线索：")[1];
+        // 区分公开/私有，分别存入对应记录
+        if (clueText.contains("【公开】")) {
+            recordGlobalChat(roomId, "【搜证-" + roleName + "】" + clueResult);
+        } else {
+            recordGlobalChat(roomId, "【搜证-" + roleName + "】获得一条私有线索（仅本人可见）");
+            recordPrivateChat(roomId, roleName, "【搜证私有线索】" + clueResult);
         }
-        String[] roleInfo = ROLE_MAP.get(roleName);
-        String publicIdentity = roleInfo[0];
-        String secret = roleInfo[1];
+        return clueResult;
+    }
 
-        String introPrompt = String.format("""
-                你是角色【%s】，身份：%s。
-                自我介绍仅展示公开人设，严禁泄露隐藏秘密。
-                简短自然一段自我介绍。
-                """, roleName, publicIdentity);
+    // ========== 投票接口（全局可见） ==========
+    public String voteSuspect(String roomId, String voter, String target) {
+        GameStage stage = roomStage.get(roomId);
+        if (!GameStage.VOTE.equals(stage)) return "当前非投票阶段";
+        Set<String> roomRoles = roomSelectedRoles.get(roomId);
+        if (!roomRoles.contains(voter)) return "请先选择角色再投票";
 
-        ReActAgent agent = agentConfig.createPlayerAgent(roleName, publicIdentity, secret);
-        Msg msg = Msg.builder().role(MsgRole.USER).textContent(introPrompt).build();
-        RuntimeContext ctx = RuntimeContext.builder().sessionId("room_" + roomId + "_" + roleName).build();
-        String introText = agent.call(List.of(msg), ctx).block().getTextContent();
+        String voteLog = scriptKillTools.voteSuspect(roomId, voter, target);
+        recordGlobalChat(roomId, "【投票】" + voteLog);
+        return voteLog;
+    }
 
+    // ========== 自我介绍（全局可见） ==========
+    public String selfIntro(String roomId, String roleName) {
+        Set<String> roomRoles = roomSelectedRoles.get(roomId);
+        if (!roomRoles.contains(roleName)) return "未选择角色，无法自我介绍";
+        GameStage stage = roomStage.get(roomId);
+        if (!GameStage.SELF_INTRO.equals(stage)) return "当前非自我介绍阶段";
+
+        String identity = ROLE_MAP.get(roleName)[0];
+        String prompt = String.format("玩家【%s】完成自我介绍，简单友好回应，不泄露凶手和他人秘密，身份：%s", roleName, identity);
+        String dmReply = dmCall(roomId, prompt);
         roomIntroDone.get(roomId).add(roleName);
-        recordHistory(roomId, String.format("【%s自我介绍】：%s", roleName, introText));
 
-        // 三人全部自我介绍完毕，切换搜证阶段
-        Set<String> doneSet = roomIntroDone.get(roomId);
-        if (doneSet.size() == 3) {
+        String log = String.format("【%s自我介绍】DM回应：%s", roleName, dmReply);
+        recordGlobalChat(roomId, log);
+
+        // 全部角色自我介绍完成自动切搜证阶段
+        Set<String> done = roomIntroDone.get(roomId);
+        Set<String> allRoomRoles = roomSelectedRoles.get(roomId);
+        if (done.size() == allRoomRoles.size()) {
             dmCall(roomId, """
-                    全部自我介绍完成，进入搜证阶段！
-                    每位玩家拥有一次搜证机会，可调用search_clue工具，传入roomId、自身角色名、场景名称获取线索。
-                    可选场景：tea_room / study_room / maid_room / business_room / doctor_room
+                    所有玩家自我介绍完毕，进入搜证阶段，每人仅一次搜证机会，可选场景：
+                    tea_room / study_room / maid_room / business_room / doctor_room
+                    搜证获得的私有线索仅自己可见，公开线索全房间可见。
                     """);
             roomStage.put(roomId, GameStage.SEARCH);
         }
-        return introText;
+        return log;
     }
 
-    // AI自动执行一轮搜证（AI自主调用search_clue工具获取线索）
-    public String aiAutoSearchAllOtherRole(String roomId) {
+    // ========== 1. 全局公聊发言（所有角色可见） ==========
+    public String publicChat(String roomId, String roleName, String content) {
         GameStage stage = roomStage.get(roomId);
-        if (!GameStage.SEARCH.equals(stage)) {
-            return "当前非搜证阶段，AI无法自动搜证";
-        }
-        StringBuilder resultSb = new StringBuilder();
-        String humanRole = roomHumanRole.get(roomId);
-        String fullHistory = getRoomHistory(roomId);
+        if (GameStage.SELF_INTRO.equals(stage)) return "自我介绍阶段禁止公聊";
+        Set<String> roomRoles = roomSelectedRoles.get(roomId);
+        if (!roomRoles.contains(roleName)) return "未选择角色，无法发言";
 
-        for (Map.Entry<String, String[]> entry : ROLE_MAP.entrySet()) {
-            String aiRole = entry.getKey();
-            if (aiRole.equals(humanRole)) continue;
-            // 判断是否已搜证，未搜证才执行AI自动搜证
-            if (scriptKillTools.playerHasSearched(roomId, aiRole)) {
-                resultSb.append("【AI-").append(aiRole).append("】已完成搜证，跳过\n");
-                continue;
-            }
-
-            ReActAgent aiAgent = agentConfig.createPlayerAgent(aiRole, entry.getValue()[0], entry.getValue()[1]);
-            String prompt = String.format("""
-                    当前处于搜证阶段，你是角色%s，房间ID:%s。
-                    查看全局对话记录，自主选择一个场景调用search_clue工具搜证线索，每人只能搜证一次。
-                    全局对话记录：%s
-                    """, aiRole, roomId, fullHistory);
-
-            Msg msg = Msg.builder().role(MsgRole.USER).textContent(prompt).build();
-            RuntimeContext ctx = RuntimeContext.builder().sessionId("room_" + roomId + "_auto_search_" + aiRole).build();
-            // ReAct自动识别并调用search_clue工具，返回包含搜证结果的完整输出
-            String aiOutput = aiAgent.call(List.of(msg), ctx).block().getTextContent();
-
-            String recordText = String.format("【AI自动搜证-%s】%s", aiRole, aiOutput);
-            recordHistory(roomId, recordText);
-            resultSb.append(recordText).append("\n");
-        }
-        return resultSb.toString();
+        String log = String.format("【公聊-%s】：%s", roleName, content);
+        recordGlobalChat(roomId, log);
+        return log;
     }
 
-    // 真人玩家发言
-    public String humanPlayerChat(String roomId, String content) {
+    // ========== 2. 私聊发言（仅发送方+接收方私有记录可见，全局不展示） ==========
+    public String privateChat(String roomId, String sender, String receiver, String content) {
         GameStage stage = roomStage.get(roomId);
-        if (GameStage.SELF_INTRO.equals(stage)) {
-            return "自我介绍阶段请先完成自我介绍再发言";
+        if (GameStage.SELF_INTRO.equals(stage)) return "自我介绍阶段禁止私聊";
+        Set<String> roomRoles = roomSelectedRoles.get(roomId);
+        if (!roomRoles.contains(sender) || !roomRoles.contains(receiver)) {
+            return "发送方或接收方未选择角色";
         }
-        String humanRole = roomHumanRole.get(roomId);
-        String[] roleInfo = ROLE_MAP.get(humanRole);
-        String historyText = getRoomHistory(roomId);
-        recordHistory(roomId, String.format("【真人玩家-%s】：%s", humanRole, content));
+        if (sender.equals(receiver)) return "不能和自己私聊";
 
-        ReActAgent humanAgent = agentConfig.createPlayerAgent(humanRole, roleInfo[0], roleInfo[1]);
-        Msg msg = Msg.builder()
-                .role(MsgRole.USER)
-                .textContent("全局全部对话+搜证记录：" + historyText + "\n我的发言：" + content + "\n结合线索推理，隐藏自身秘密")
-                .build();
-        RuntimeContext ctx = RuntimeContext.builder().sessionId("room_" + roomId + "_human").build();
-        String reply = humanAgent.call(List.of(msg), ctx).block().getTextContent();
-        recordHistory(roomId, String.format("【%s角色回应】：%s", humanRole, reply));
-        return reply;
+        String log = String.format("【私聊-%s→%s】：%s", sender, receiver, content);
+        // 私聊分别存入双方私有缓存，全局公聊无记录，保护隐私
+        recordPrivateChat(roomId, sender, log);
+        recordPrivateChat(roomId, receiver, log);
+        return log;
     }
 
-    // 切换下一游戏阶段
-    public String dmNextStage(String roomId) {
+    // ========== 阶段切换 ==========
+    public String nextGameStage(String roomId) {
         GameStage current = roomStage.get(roomId);
         String prompt = switch (current) {
+            case OPEN -> """
+                    所有玩家角色选择完毕，进入自我介绍阶段，请依次完成自我介绍。
+                    """;
             case SEARCH -> """
-                    搜证阶段结束，进入公聊推理阶段，所有人分享搜到的线索，互相质问梳理疑点。
+                    搜证阶段结束，进入公聊推理阶段，玩家可分享公开线索、互相质问。
                     """;
             case DISCUSS -> """
-                    公聊结束，进入投票阶段，调用vote_suspect工具传入roomId、自己名字、嫌疑人完成投票。
+                    公聊结束，进入投票阶段，玩家可投票指认凶手。
                     """;
             case VOTE -> {
-                String maxSuspect = scriptKillTools.getRoomMaxVoteSuspect(roomId);
-                yield String.format("投票结束，最高票嫌疑人：%s，完整复盘案件全部真相、凶手作案手法与动机", maxSuspect);
+                String maxSus = scriptKillTools.getRoomMaxVoteSuspect(roomId);
+                yield String.format("投票结束，最高票嫌疑人：%s，完整复盘全部案件真相、密室下毒手法、动机。", maxSus);
             }
             default -> "无法切换阶段，当前阶段：" + current;
         };
         String dmReply = dmCall(roomId, prompt);
         switch (current) {
+            case OPEN -> roomStage.put(roomId, GameStage.SELF_INTRO);
             case SEARCH -> roomStage.put(roomId, GameStage.DISCUSS);
             case DISCUSS -> roomStage.put(roomId, GameStage.VOTE);
             case VOTE -> roomStage.put(roomId, GameStage.REVIEW);
@@ -223,64 +230,50 @@ public class ScriptKillGameService {
         return "切换新阶段：" + roomStage.get(roomId) + "\nDM：" + dmReply;
     }
 
-    // 批量执行所有AI自我介绍
-    public String aiAllSelfIntro(String roomId) {
-        StringBuilder sb = new StringBuilder();
-        String human = roomHumanRole.get(roomId);
-        for (String role : ROLE_MAP.keySet()) {
-            if (!role.equals(human)) {
-                String intro = roleSelfIntro(roomId, role);
-                sb.append("【AI-").append(role).append("自我介绍】：").append(intro).append("\n");
-            }
-        }
-        return sb.toString();
+    // ========== 历史记录读写工具 ==========
+    // 写入全局公聊（所有人可见）
+    private void recordGlobalChat(String roomId, String text) {
+        roomGlobalChat.get(roomId).append(text).append("\n");
+    }
+    // 写入角色私有记录（仅当前角色可见）
+    private void recordPrivateChat(String roomId, String roleName, String text) {
+        Map<String, StringBuilder> privateMap = roomPrivateChat.get(roomId);
+        privateMap.computeIfAbsent(roleName, k -> new StringBuilder()).append(text).append("\n");
     }
 
-    // AI角色一轮自由公聊发言
-    public String aiOtherRoleTalk(String roomId) {
-        GameStage stage = roomStage.get(roomId);
-        if (GameStage.SELF_INTRO.equals(stage)) {
-            return "自我介绍阶段无法自由发言";
-        }
-        StringBuilder sb = new StringBuilder();
-        String human = roomHumanRole.get(roomId);
-        String historyText = getRoomHistory(roomId);
-
-        for (Map.Entry<String, String[]> entry : ROLE_MAP.entrySet()) {
-            String roleName = entry.getKey();
-            if (roleName.equals(human)) continue;
-            String identity = entry.getValue()[0];
-            String secret = entry.getValue()[1];
-            ReActAgent aiAgent = agentConfig.createPlayerAgent(roleName, identity, secret);
-
-            Msg msg = Msg.builder()
-                    .role(MsgRole.USER)
-                    .textContent("完整对话与搜证线索记录：" + historyText + "，轮到你发言推理，隐藏自身秘密")
-                    .build();
-            RuntimeContext ctx = RuntimeContext.builder().sessionId("room_" + roomId + "_talk_" + roleName).build();
-            String talk = aiAgent.call(List.of(msg), ctx).block().getTextContent();
-            String record = String.format("【AI-%s】：%s", roleName, talk);
-            recordHistory(roomId, record);
-            sb.append(record).append("\n");
-        }
-        return sb.toString();
+    // 接口1：获取全局公聊全部记录（所有玩家通用）
+    public String getGlobalHistory(String roomId) {
+        StringBuilder sb = roomGlobalChat.get(roomId);
+        return sb == null ? "房间不存在" : sb.toString();
     }
 
-    // 记录对话到房间历史
-    private void recordHistory(String roomId, String text) {
-        roomHistory.get(roomId).append(text).append("\n");
+    // 接口2：获取当前角色私有历史（仅本人可查看，含私有线索、私聊）
+    public String getRolePrivateHistory(String roomId, String roleName) {
+        Map<String, StringBuilder> privateMap = roomPrivateChat.get(roomId);
+        if (!privateMap.containsKey(roleName)) return "暂无你的私有记录";
+        return privateMap.get(roleName).toString();
     }
 
-    // 获取房间完整对话历史
-    public String getRoomHistory(String roomId) {
-        StringBuilder sb = roomHistory.get(roomId);
-        return sb == null ? "房间不存在，请先开局" : sb.toString();
+    // 接口3：查询角色自身全部私有线索（前端线索面板）
+    public List<String> getRolePrivateClues(String roomId, String roleName) {
+        return scriptKillTools.getPlayerPrivateClues(roomId, roleName);
     }
 
-    // 销毁房间，释放全部缓存，防止内存泄漏
+    // 辅助接口：查询房间已选角色列表
+    public Set<String> getRoomSelectedRoles(String roomId) {
+        return roomSelectedRoles.getOrDefault(roomId, Set.of());
+    }
+
+    // 辅助接口：查询当前游戏阶段
+    public GameStage getCurrentStage(String roomId) {
+        return roomStage.get(roomId);
+    }
+
+    // 销毁房间，清空所有缓存防止内存泄漏
     public void destroyRoom(String roomId) {
-        roomHistory.remove(roomId);
-        roomHumanRole.remove(roomId);
+        roomGlobalChat.remove(roomId);
+        roomPrivateChat.remove(roomId);
+        roomSelectedRoles.remove(roomId);
         roomStage.remove(roomId);
         roomIntroDone.remove(roomId);
         scriptKillTools.clearRoomAllData(roomId);
