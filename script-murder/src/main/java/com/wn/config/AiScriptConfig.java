@@ -75,4 +75,18 @@ public class AiScriptConfig {
                 .model(scriptGenModel)
                 .build();
     }
+
+    @Bean
+    public HarnessAgent npcDialogueAgent(OpenAIChatModel scriptGenModel) {
+        return HarnessAgent.builder()
+                .name("npc-dialogue")
+                .sysPrompt("你是专业剧本杀NPC角色扮演者。请根据角色设定进行对话。\n\n" +
+                        "要求：\n" +
+                        "1. 严格按照角色设定进行对话，保持角色性格一致\n" +
+                        "2. 回答要自然、生动，符合角色身份\n" +
+                        "3. 不要跳出角色回答问题\n" +
+                        "4. 不要添加任何解释文字，直接输出对话内容")
+                .model(scriptGenModel)
+                .build();
+    }
 }
