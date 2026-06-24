@@ -114,6 +114,16 @@ public class GameRoomServiceImpl implements GameRoomService {
         return String.valueOf(System.currentTimeMillis() % 1000000);
     }
 
+//获取列表
+    @Override
+    public List<RoomDetailVO> getRoomList() {
+        List<RoomPO> rooms = roomMapper.findAll();
+        return rooms.stream()
+                .filter(r -> r.getRoomStatus() != 2)
+                .map(this::buildRoomDetailVO)
+                .collect(Collectors.toList());
+    }
+
     /**
      * 根据房间号查房间
      */

@@ -33,4 +33,6 @@ public  interface GameRoomService{
     String joinRoom(String roomNo, String password, Long userId) throws BusinessException;
 
     Object getByRoomId(Long roomId);
+
+    List<RoomDetailVO> getRoomList();
 }

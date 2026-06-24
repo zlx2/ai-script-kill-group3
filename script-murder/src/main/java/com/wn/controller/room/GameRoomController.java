@@ -6,12 +6,15 @@ import com.wn.controller.room.vo.CreateRoomResultVO;
 import com.wn.controller.room.vo.RoomDetailVO;
 import com.wn.controller.room.vo.RoomPlayerVO;
 import com.wn.entity.R;
+import com.wn.entity.room.RoomPO;
+import com.wn.mapper.room.RoomMapper;
 import com.wn.service.exception.BusinessException;
 import com.wn.service.room.GameRoomService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 游戏房间控制器
@@ -26,6 +29,18 @@ import java.util.List;
 public class GameRoomController {
 
     private final GameRoomService gameRoomService;
+    private final RoomMapper roomMapper;
+
+
+    /**
+     * 获取房间列表
+     * GET /api/room/list
+     * @return 所有未结束的房间列表
+     */
+    @GetMapping("/list")
+    public R getRoomList() {
+        return new R(gameRoomService.getRoomList());
+    }
 
     /**
      * 创建房间
@@ -44,9 +59,12 @@ public class GameRoomController {
                 dto.getScriptId(), dto.getRoomName(), dto.getPassword(), userId
         );
 
+        RoomPO room = roomMapper.findByRoomNo(roomNo);
+
         CreateRoomResultVO result = new CreateRoomResultVO();
         result.setRoomNo(roomNo);
 //        result.setRoomId(gameRoomService.getByRoomNo(roomNo).getRoomId());
+        result.setRoomId(room.getRoomId());
         result.setRoomName(dto.getRoomName());
 
         // 携带数据返回成功
