@@ -17,7 +17,7 @@ public interface RoomMapper extends JpaRepository<RoomPO, String> {
     boolean existsByRoomNo(String roomNo);
 
 
-    Optional<RoomPO> getByRoomNo(String roomNo);
+    Optional<RoomPO> findByRoomNo(String roomNo);
 
-    RoomPO findByRoomNo(String roomNo);
+
 }

@@ -2,6 +2,7 @@ package com.wn.service.room;
 
 import com.wn.controller.room.vo.RoomDetailVO;
 import com.wn.controller.room.vo.RoomPlayerVO;
+import com.wn.entity.room.RoomPO;
 import com.wn.service.exception.BusinessException;
 
 import java.util.List;
@@ -32,7 +33,9 @@ public  interface GameRoomService{
 
     String joinRoom(String roomNo, String password, Long userId) throws BusinessException;
 
-    Object getByRoomId(Long roomId);
+    RoomPO getByRoomId(String roomId);
+
+    RoomPO findByRoomNo(String roomNo) throws BusinessException;
 
     List<RoomDetailVO> getRoomList();
 }

@@ -27,7 +27,7 @@ public class FaceToFaceController {
      * @return 4位面对面号码
      */
     @PostMapping("/create")
-    public R create(@RequestHeader("userId") Long userId) throws BusinessException {
+    public R create(@RequestHeader("userId") Long userId) {
         String code = faceToFaceService.createFaceToFace(userId);
         return new R(code);
     }
@@ -44,7 +44,7 @@ public class FaceToFaceController {
             @RequestParam String code,
             @RequestHeader("userId") Long id) throws BusinessException {
 
-        String roomId = faceToFaceService.joinFaceToFace(code, id).toString();
+        String roomId = faceToFaceService.joinFaceToFace(code, id);
         return new R(roomId);
     }
 

@@ -128,9 +128,9 @@ public class GameRoomServiceImpl implements GameRoomService {
      * 根据房间号查房间
      */
     @Override
-    public Object getByRoomNo(String roomNo) {
+    public RoomPO  getByRoomNo(String roomNo) {
 
-        return roomMapper.getByRoomNo(roomNo);
+        return roomMapper.findByRoomNo(roomNo).orElse(null);
     }
     /**
      * 获取房间详情:整合完房间基础信息、剧本、房主、玩家、密码标记后，把完整 VO 返回给 Controller，直接序列化 JSON 给到前端页面。
@@ -190,7 +190,7 @@ public class GameRoomServiceImpl implements GameRoomService {
      */
     @Override
     public RoomDetailVO getRoomDetailByNo(String roomNo) throws BusinessException {
-        RoomPO room = roomMapper.findByRoomNo(roomNo);
+        RoomPO room = roomMapper.findByRoomNo(roomNo).orElse(null);;
         if (room == null) {
             throw new BusinessException("房间不存在");
         }
@@ -442,7 +442,7 @@ public class GameRoomServiceImpl implements GameRoomService {
      */
     @Override
     public String joinRoom(String roomNo, String password, Long userId) throws BusinessException {
-        RoomPO room = roomMapper.findByRoomNo(roomNo);
+        RoomPO room = roomMapper.findByRoomNo(roomNo).orElse(null);
         if (room == null) {
             throw new BusinessException("房间不存在");
         }
@@ -514,7 +514,16 @@ public class GameRoomServiceImpl implements GameRoomService {
     }
 
     @Override
-    public Object getByRoomId(Long roomId) {
-        return null;
+    public RoomPO getByRoomId(String roomId) {
+        return roomMapper.findById(roomId).orElse(null);
+    }
+
+    @Override
+    public RoomPO findByRoomNo(String roomNo) throws BusinessException {
+        RoomPO room = roomMapper.findByRoomNo(roomNo).orElse(null);;
+        if (room == null) {
+            throw new BusinessException("房间号[" + roomNo + "]不存在");
+        }
+        return room;
     }
 }

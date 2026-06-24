@@ -12,11 +12,12 @@ public interface FaceToFaceService {
 
     String createFaceToFace(Long userId);
 
-    Long joinFaceToFace(String code, Long userId) throws BusinessException;
+    String joinFaceToFace(String code, Long userId) throws BusinessException;
 
     boolean checkCodeExists(String code);
 
     void cancelFaceToFace(String code, Long userId);
 
     Integer getPlayerCount(String code);
+
 }

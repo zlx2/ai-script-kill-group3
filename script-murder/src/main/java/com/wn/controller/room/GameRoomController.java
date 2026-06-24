@@ -63,7 +63,7 @@ public class GameRoomController {
 
         CreateRoomResultVO result = new CreateRoomResultVO();
         result.setRoomNo(roomNo);
-//        result.setRoomId(gameRoomService.getByRoomNo(roomNo).getRoomId());
+        result.setRoomId(gameRoomService.findByRoomNo(roomNo).getRoomId());
         result.setRoomId(room.getRoomId());
         result.setRoomName(dto.getRoomName());
 
