@@ -16,20 +16,19 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class AiScriptConfig {
 
-    @Value("${agentscope.deepseek.api-key}")
+    @Value("${spring.ai.dashscope.api-key}")
     private String apiKey;
 
-    @Value("${agentscope.deepseek.base-url}")
-    private String baseUrl;
+//    @Value("${agentscope.deepseek.base-url}")
+//    private String baseUrl;
 
-    @Value("${agentscope.deepseek.model-name}")
+    @Value("${spring.ai.dashscope.chat.options.model}")
     private String modelName;
 
     @Bean
     public OpenAIChatModel scriptGenModel() {
         return OpenAIChatModel.builder()
                 .apiKey(apiKey)
-                .baseUrl(baseUrl)
                 .modelName(modelName)
                 .stream(true)
                 .build();

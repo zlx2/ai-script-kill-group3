@@ -41,6 +41,32 @@
         </dependencies>
     </dependencyManagement>
     <dependencies>
+        <!-- Jakarta 参数校验依赖 SpringBoot3专用 -->
+        <dependency>
+            <groupId>jakarta.validation</groupId>
+            <artifactId>jakarta.validation-api</artifactId>
+        </dependency>
+        <!-- 校验实现（Hibernate Validator） -->
+        <dependency>
+            <groupId>org.hibernate.validator</groupId>
+            <artifactId>hibernate-validator</artifactId>
+        </dependency>
+        <!--            引入fastjson2依赖 -->
+        <dependency>
+            <groupId>com.alibaba.fastjson2</groupId>
+            <artifactId>fastjson2</artifactId>
+            <version>2.0.32</version>
+        </dependency>
+        <dependency>
+            <groupId>io.agentscope</groupId>
+            <artifactId>agentscope-core</artifactId>
+            <version>${agentscope.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.agentscope</groupId>
+            <artifactId>agentscope-extensions-redis</artifactId>
+            <version>2.0.0-RC3</version>
+        </dependency>
         <!--            引入fastjson2依赖 -->
         <dependency>
             <groupId>com.alibaba.fastjson2</groupId>
