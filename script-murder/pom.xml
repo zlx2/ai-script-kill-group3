@@ -28,9 +28,56 @@
     </scm>
     <properties>
         <java.version>21</java.version>
-        <agentscope.version>2.0.0-RC1</agentscope.version>
+        <agentscope.version>2.0.0-RC3</agentscope.version>
     </properties>
+    <dependencyManagement>
+        <dependencies>
+            <!-- 全局强制Jedis 4.4.3（支持JedisPooled） -->
+            <dependency>
+                <groupId>redis.clients</groupId>
+                <artifactId>jedis</artifactId>
+                <version>4.4.3</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
     <dependencies>
+        <!--            引入fastjson2依赖 -->
+        <dependency>
+            <groupId>com.alibaba.fastjson2</groupId>
+            <artifactId>fastjson2</artifactId>
+            <version>2.0.32</version>
+        </dependency>
+        <dependency>
+            <groupId>io.agentscope</groupId>
+            <artifactId>agentscope-core</artifactId>
+            <version>${agentscope.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.agentscope</groupId>
+            <artifactId>agentscope-extensions-redis</artifactId>
+            <version>2.0.0-RC3</version>
+        </dependency>
+        <!-- Spring Redis Starter，排除Lettuce，只留Jedis -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>io.lettuce</groupId>
+                    <artifactId>lettuce-core</artifactId>
+                </exclusion>
+                <!-- 排除starter自带的低版本jedis -->
+                <exclusion>
+                    <groupId>redis.clients</groupId>
+                    <artifactId>jedis</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <!-- 手动引入指定版本Jedis -->
+        <dependency>
+            <groupId>redis.clients</groupId>
+            <artifactId>jedis</artifactId>
+        </dependency>
         <!--     引入aliyun oss依赖   -->
         <dependency>
             <groupId>com.aliyun.oss</groupId>
@@ -148,5 +195,4 @@
             </plugin>
         </plugins>
     </build>
-
 </project>

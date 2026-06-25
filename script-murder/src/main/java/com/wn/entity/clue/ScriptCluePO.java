@@ -24,32 +24,47 @@ public class ScriptCluePO {
     @Column(name = "clue_id")
     private Long clueId;
 
+    //剧本id
     @Column(name = "script_id", nullable = false)
     private Long scriptId;
 
+    //线索名称
     @Column(name = "clue_name", nullable = false, length = 200)
     private String clueName;
 
+    //线索描述
     @Column(name = "clue_description", columnDefinition = "TEXT")
     private String clueDescription;
 
+    //线索所在场景
     @Column(name = "scene", length = 100)
-    private String scene;
+    private int scene;//场景id，1表示第一幕，2表示第二幕，3表示第三幕...
 
+    //是否隐藏 0隐藏 1公开
     @Column(name = "is_hidden")
-    private Byte isHidden = 0;
+    private int isHidden = 0;
 
+    //解锁条件
     @Column(name = "unlock_condition", columnDefinition = "TEXT")
     private String unlockCondition;
 
+    //线索顺序
     @Column(name = "act_order")
     private Integer actOrder;
 
+    //线索重要等级 1普通 2重要 3紧急
     @Column(name = "importance_level")
     private Byte importanceLevel = 1;
 
+    //创建时间
     @Column(name = "create_time", updatable = false)
     private LocalDateTime createTime;
+
+    /**
+     * 关联的角色ID（对应 ScriptRolePO.roleId），用于指定线索的所属角色
+     */
+    @Column(name = "role_id")
+    private Long roleId;
 
     @PrePersist
     public void prePersist() {
