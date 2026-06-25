@@ -17,7 +17,6 @@ import java.util.List;
 
 @Repository
 public interface RoleStageContentMapper extends JpaRepository<RoleStageContentPO, Long> {
-
     /**
      * 根据剧本id、角色id 查询该角色全部分幕章节
      * 关联幕表获取幕号、幕名称
