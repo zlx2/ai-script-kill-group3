@@ -59,7 +59,7 @@ public class GameRoomController {
                 dto.getScriptId(), dto.getRoomName(), dto.getPassword(), userId
         );
 
-        RoomPO room = roomMapper.findByRoomNo(roomNo).orElse(null);
+        RoomPO room = roomMapper.findByRoomNo(roomNo).orElse( null);
 
         CreateRoomResultVO result = new CreateRoomResultVO();
         result.setRoomNo(roomNo);
