@@ -38,11 +38,11 @@ public class ScriptCluePO {
 
     //线索所在场景
     @Column(name = "scene", length = 100)
-    private int scene;//场景id，1表示第一幕，2表示第二幕，3表示第三幕...
+    private int scene;//场景id，0代表开局就有 1表示第一幕，2表示第二幕，3表示第三幕...
 
     //是否隐藏 0隐藏 1公开
-    @Column(name = "is_hidden")
-    private int isHidden = 0;
+    @Column(name = "is_public")
+    private byte isPublic = 0;
 
     //解锁条件
     @Column(name = "unlock_condition", columnDefinition = "TEXT")

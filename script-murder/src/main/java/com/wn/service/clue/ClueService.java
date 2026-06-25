@@ -5,8 +5,6 @@ import com.wn.entity.clue.ScriptCluePO;
 import java.util.List;
 
 public interface ClueService {
-
-    List<ScriptCluePO> getAllClues(Long roleId, int scene);
-
-    void openClue(Long clueId);
+    List<ScriptCluePO> getAllClues(Long roleId, int scene, String roomId);
+    List<ScriptCluePO> openClue(String roomId, Long clueId, Long userId, Long roleId, int scene);
 }

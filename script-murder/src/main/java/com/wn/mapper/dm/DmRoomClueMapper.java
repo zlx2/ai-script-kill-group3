@@ -17,4 +17,6 @@ public interface DmRoomClueMapper extends JpaRepository<RoomCluePO, Long> {
     List<RoomCluePO> findByRoomId(String roomId);
     List<RoomCluePO> findByRoomIdAndPlayerId(String roomId, Long playerId);
     boolean existsByRoomIdAndPlayerIdAndClueId(String roomId, Long playerId, Long clueId);
+
+    boolean existsByRoomIdAndClueId(String roomId, Long clueId);
 }

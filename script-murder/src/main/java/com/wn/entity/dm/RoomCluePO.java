@@ -37,7 +37,7 @@ public class RoomCluePO {
     private LocalDateTime obtainTime;  ///领取时间，记录玩家搜到这条线索的时间
 
     @Column(name = "is_public")
-    private Byte isPublic = 0;  ///是否公开，0 表示不公开，1 表示公开 ，默认0
+    private int isPublic = 0;  ///是否公开，0 表示不公开，1 表示公开 ，默认0
 
     @PrePersist
     public void prePersist() {
