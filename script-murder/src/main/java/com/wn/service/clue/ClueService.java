@@ -6,7 +6,7 @@ import java.util.List;
 
 public interface ClueService {
 
-    List<ScriptCluePO> getAllClues(Long roleId, String scene);
+    List<ScriptCluePO> getAllClues(Long roleId, int scene);
 
     void openClue(Long clueId);
 }

@@ -10,5 +10,5 @@ import java.util.List;
  */
 public interface ClueMapper extends JpaRepository<ScriptCluePO, Long> {
 
-    List<ScriptCluePO> findByRoleIdAndScene(Long roleId, String scene);
+    List<ScriptCluePO> findByRoleIdAndScene(Long roleId, int scene);
 }

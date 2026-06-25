@@ -17,6 +17,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class ClueServiceImpl implements ClueService {
+
     private final ClueMapper clueMapper;
     /**
      * 获取所有线索，包括公开和未公开的线索
@@ -25,9 +26,9 @@ public class ClueServiceImpl implements ClueService {
      *      2.当前场景下的线索，包括已经经历过的场景和已知的线索
      */
     @Override
-    public List<ScriptCluePO> getAllClues(Long roleId, String scene) {
-        if (roleId == null || scene == null) {
-            throw new GlobalException(400,"角色ID或场景不能为空");
+    public List<ScriptCluePO> getAllClues(Long roleId, int scene) {
+        if (roleId == null || scene == 0 || scene > 10) {
+            throw new GlobalException(400,"角色ID或场景不合规");
         }
 
 

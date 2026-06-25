@@ -23,7 +23,7 @@ public class CuesController {
      * 查询该角色的所有线索（公开，私有都查，以字段形式分辨返回）
      */
     @RequestMapping("/all")
-    public List<ScriptCluePO> getAllClues(Long roleId, String scene) {
+    public List<ScriptCluePO> getAllClues(Long roleId, int scene) {
         return clueService.getAllClues(roleId, scene);
     }
 
