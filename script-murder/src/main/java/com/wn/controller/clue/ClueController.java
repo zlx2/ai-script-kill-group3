@@ -2,6 +2,7 @@ package com.wn.controller.clue;
 
 import com.wn.entity.R;
 import com.wn.entity.clue.ScriptCluePO;
+import com.wn.entity.dm.RoomCluePO;
 import com.wn.service.clue.ClueService;
 import com.wn.utils.exception.GlobalException;
 import lombok.RequiredArgsConstructor;
@@ -46,5 +47,12 @@ public class ClueController {
                                        @RequestParam Long roleId,
                                        @RequestParam int scene) {
         return clueService.openClue(roomId, clueId, userId, roleId, scene);
+    }
+
+
+    @PostMapping("/add")
+    public R addClue(@RequestBody ScriptCluePO scriptCluePO) {
+        clueService.addClue(scriptCluePO);
+        return R.SUCCESS;
     }
 }

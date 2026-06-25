@@ -2,9 +2,11 @@ package com.wn.service.impl.clue;
 
 import com.wn.entity.clue.ScriptCluePO;
 import com.wn.entity.dm.RoomCluePO;
+import com.wn.entity.script.ScriptPO;
 import com.wn.entity.script.ScriptRolePO;
 import com.wn.mapper.clue.ClueMapper;
 import com.wn.mapper.dm.DmRoomClueMapper;
+import com.wn.mapper.script.ScriptMapper;
 import com.wn.mapper.script.ScriptRoleMapper;
 import com.wn.service.clue.ClueService;
 import com.wn.utils.exception.GlobalException;
@@ -31,6 +33,7 @@ public class ClueServiceImpl implements ClueService {
     private final ClueMapper clueMapper;
     private final ScriptRoleMapper scriptRoleMapper;
     private final DmRoomClueMapper dmRoomClueMapper;
+    private final ScriptMapper scriptMapper;
 
     /**
      * 获取所有线索
@@ -126,5 +129,20 @@ public class ClueServiceImpl implements ClueService {
 
         // 6. 返回更新后的线索列表
         return getAllClues(roleId, scene, roomId);
+    }
+
+    /**
+     * 新增角色线索类
+     */
+    @Override
+    public void addClue(ScriptCluePO scriptCluePO) {
+        // 1. 校验角色是否存在
+        ScriptRolePO role = scriptRoleMapper.findById(scriptCluePO.getRoleId())
+                .orElseThrow(() -> new GlobalException(404, "角色不存在"));
+        // 2. 校验剧本是否存在
+        ScriptPO script = scriptMapper.findById(role.getScriptId())
+                .orElseThrow(() -> new GlobalException(404, "剧本不存在"));
+
+        clueMapper.save(scriptCluePO);
     }
 }
