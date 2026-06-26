@@ -8,11 +8,13 @@ package com.wn.config;
 
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
+import org.springframework.web.socket.server.standard.ServletServerContainerFactoryBean;
 
 /**
  * WebSocket 配置类
@@ -43,5 +45,21 @@ public class WebSocketConfig implements WebSocketConfigurer {
         registry.addHandler(WebSocketHandler, "/ws/game")
                 // 允许跨域（开发环境用 *，生产环境要改成具体域名）
                 .setAllowedOrigins("*");
+    }
+
+    /**
+     * 创建 WebSocket 容器工厂
+     * 【作用】
+     * 配置 WebSocket 容器，设置最大消息缓冲区大小。
+     * 【参数说明】
+     * - maxTextMessageBufferSize：最大文本消息缓冲区大小，单位字节
+     * - maxBinaryMessageBufferSize：最大二进制消息缓冲区大小，单位字节
+     */
+    @Bean
+    public ServletServerContainerFactoryBean createWebSocketContainer() {
+        ServletServerContainerFactoryBean container = new ServletServerContainerFactoryBean();
+        container.setMaxTextMessageBufferSize(128 * 1024);
+        container.setMaxBinaryMessageBufferSize(128 * 1024);
+        return container;
     }
 }

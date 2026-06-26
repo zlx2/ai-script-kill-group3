@@ -20,6 +20,7 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -184,7 +185,18 @@ public class WebSocketHandler extends TextWebSocketHandler {
                                 .build());
                     }
                     break;
-
+                /**
+                 * 主叫端 创建 Offer → 发给服务端；
+                 * 服务端转发 Offer → 给 被叫端；
+                 * 被叫端 收到后创建 Answer → 发给服务端；
+                 * 服务端转发 Answer → 给 主叫端；
+                 * 双方同时开始交换各自的 Candidate（这个过程是并发的，可能穿插在上述步骤中），直到某一对 Candidate 成功打通“网络隧道”为止。
+                 */
+                case "webrtc_offer":// 主叫端 创建 Offer → 发给服务端；
+                case "webrtc_answer":// 被叫端 收到后创建 Answer → 发给服务端；
+                case "webrtc_candidate":// 双方同时开始交换各自的 Candidate（这个过程是并发的，可能穿插在上述步骤中），直到某一对 Candidate 成功打通“网络隧道”为止。
+                    handleWebRtcSignal(session, wsMessage);
+                    break;
                 // TODO: 可以在这里加更多消息处理，比如聊天消息
                 // case "chat":
                 //     handleChatMessage(session, wsMessage);
@@ -369,5 +381,31 @@ public class WebSocketHandler extends TextWebSocketHandler {
         }
 
         return null;
+    }
+
+    // =================================== WebRTC 信令转发 ====================================================
+    @SuppressWarnings("unchecked")// 忽略类型检查警告，因为 data 是 Map<String, Object>
+    private void handleWebRtcSignal(WebSocketSession session, WsMessage<?> wsMessage) {
+        if (!(wsMessage.getData() instanceof Map)) return;
+
+        Map<String, Object> data = (Map<String, Object>) wsMessage.getData();
+        Long sourceUserId = getParamFromSession(session, "userId", Long.class);
+        Object targetObj = data.get("targetUserId");
+
+        if (sourceUserId == null || targetObj == null) return;
+
+        Long targetUserId = targetObj instanceof Long ? (Long) targetObj
+                : Long.valueOf(targetObj.toString());
+
+        data.put("sourceUserId", sourceUserId);
+
+        WsMessage<Map<String, Object>> relay = WsMessage.<Map<String, Object>>builder()
+                .type(wsMessage.getType())
+                .data(data)
+                .timestamp(System.currentTimeMillis())// 记录当前时间戳（毫秒）
+                .build();
+
+        sendToUser(targetUserId, relay);
+        log.debug("WebRTC 信令: {} -> {}, type={}", sourceUserId, targetUserId, wsMessage.getType());
     }
 }
