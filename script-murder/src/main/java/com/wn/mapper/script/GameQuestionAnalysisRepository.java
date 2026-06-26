@@ -10,10 +10,11 @@ import com.wn.entity.script.questions.GameQuestionAnalysisPO;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface GameQuestionAnalysisRepository extends JpaRepository<GameQuestionAnalysisPO, Long> {
-    Optional<GameQuestionAnalysisPO> findByQuestionId(Long questionId);
+    List<GameQuestionAnalysisPO> findByQuestionId(Long questionId);
     void deleteByQuestionId(Long questionId);
 }
