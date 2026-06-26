@@ -25,7 +25,7 @@ public class AgentScopeConfig {
 
     // DM主持人Agent，采用官方推荐字符串model id写法
     @Bean
-    public HarnessAgent dmAgent(Toolkit scriptToolkit) {
+    public HarnessAgent testDmAgent(Toolkit scriptToolkit) {
         String dmSystemPrompt = """
                 你是专业剧本杀DM，本局剧本设定：
                 死者：庄园主张老爷，死于密室书房，真正凶手是女仆小兰。

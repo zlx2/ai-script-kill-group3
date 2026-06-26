@@ -15,7 +15,9 @@ import com.wn.service.dm.*;
 import io.agentscope.harness.agent.HarnessAgent;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
 
 import java.util.HashMap;
 import java.util.List;
@@ -41,6 +43,9 @@ public class DmAgentServiceImpl implements DmAgentService {
     private DmVoteService voteService;
 
     private final Map<String, DmAgent> agentMap = new HashMap<>();
+
+    @Resource
+    private RedisTemplate<String, Object> redisTemplate;
 
     @Override
     public void initAgent(String roomId, Long scriptId) {
@@ -117,33 +122,136 @@ public class DmAgentServiceImpl implements DmAgentService {
     }
 
     @Override
-    public String autoRun(String roomId) {
-        StringBuilder log = new StringBuilder();
+    public Flux<String> autoRun(String roomId) {
+        return Flux.create(sink -> {
+            int maxIterations = 50;
+            int iteration = 0;
+            boolean gameEnded = false;
 
-        // 循环执行直到游戏结束
-        while (true) {
-            String gameContext = buildGameContext(roomId);
-            String decision = analyzeGame(roomId, gameContext);
-            String result = executeDecision(roomId, decision);
+            while (iteration++ < maxIterations && !gameEnded) {
+                try {
+                    // 1. 构建上下文
+                    String gameContext = buildGameContext(roomId);
 
-            log.append(result).append("\n");
+                    // 2. AI 决策
+                    String decision = analyzeGame(roomId, gameContext);
+                    JSONObject decisionObj = JSON.parseObject(decision);
+                    String action = decisionObj.getString("action");
+                    String reason = decisionObj.getString("reason");
 
-            // 如果是结局或等待，停止循环
-            JSONObject decisionObj = JSON.parseObject(decision);
-            String action = decisionObj.getString("action");
-            if ("show_ending".equals(action) || "show_review".equals(action) || "wait".equals(action)) {
-                break;
+                    // 3. 执行决策
+                    String result = executeDecision(roomId, decision);
+
+                    // 4. 推送事件
+                    Map<String, Object> eventData = new HashMap<>();
+                    eventData.put("iteration", iteration);
+                    eventData.put("action", action);
+                    eventData.put("reason", reason);
+                    eventData.put("result", result);
+                    eventData.put("currentState", buildCurrentState(roomId));
+                    eventData.put("timestamp", System.currentTimeMillis());
+                    eventData.put("waitingForPlayer", "wait".equals(action)); // 告诉前端是否需要等待
+
+                    sink.next(JSON.toJSONString(eventData));
+                    log.info("AI DM 第{}轮决策: action={}, reason={}", iteration, action, reason);
+
+                    // 5. 终局判断
+                    if ("show_ending".equals(action) || "show_review".equals(action)) {
+                        log.info("AI DM 运行结束: game over, roomId={}", roomId);
+                        gameEnded = true;
+                        break;
+                    }
+
+                    // 6. 🔥 wait 时保持连接，等待玩家操作
+                    if ("wait".equals(action)) {
+                        log.info("AI DM 等待玩家操作, roomId={}", roomId);
+
+                        // 🔥 推送一个"等待中"状态
+                        Map<String, Object> waitData = new HashMap<>();
+                        waitData.put("type", "waiting");
+                        waitData.put("message", "等待玩家操作...");
+                        waitData.put("timestamp", System.currentTimeMillis());
+                        sink.next(JSON.toJSONString(waitData));
+
+                        // 🔥 轮询检查状态变化，而不是直接结束
+                        int checkCount = 0;
+                        while (checkCount < 20) { // 最多等待 20 * 5 = 100 秒
+                            try {
+                                Thread.sleep(5000); // 每5秒检查一次
+                                checkCount++;
+
+                                // 检查是否有新变化（投票完成/玩家发言等）
+                                String newContext = buildGameContext(roomId);
+                                if (hasGameStateChanged(roomId, newContext)) {
+                                    log.info("检测到游戏状态变化, roomId={}, 继续运行", roomId);
+                                    break; // 退出内层循环，继续外层循环
+                                }
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                                break;
+                            }
+                        }
+
+                        if (checkCount >= 20) {
+                            // 超时，发送提示并继续
+                            Map<String, Object> timeoutData = new HashMap<>();
+                            timeoutData.put("type", "timeout");
+                            timeoutData.put("message", "等待超时，继续检查...");
+                            sink.next(JSON.toJSONString(timeoutData));
+                        }
+
+                        continue; // 继续外层循环
+                    }
+
+                    // 7. 非 wait 动作，等待后继续
+                    try {
+                        Thread.sleep(10000);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+
+                } catch (Exception e) {
+                    log.error("AI DM 运行异常", e);
+                    Map<String, Object> errorData = new HashMap<>();
+                    errorData.put("error", e.getMessage());
+                    errorData.put("iteration", iteration);
+                    sink.next(JSON.toJSONString(errorData));
+                    break;
+                }
             }
 
-            // 等待一段时间再继续
-            try { Thread.sleep(10000); } catch (InterruptedException e) { break; }
+            sink.complete();
+            log.info("AI DM 自动运行结束, roomId={}", roomId);
+        });
+    }
+
+    private boolean hasGameStateChanged(String roomId, String newContext) {
+        // 简单实现：比较投票数量是否变化
+        DmRoomStatePO state = roomService.getRoomState(roomId);
+        if (state == null) return false;
+
+        // 检查投票状态变化
+        List<RoomVotePO> votes = voteService.getVoteResults(roomId);
+        // 如果是投票阶段且投票人数增加了，返回 true
+        if (state.getIsVoting() == 1 && votes.size() > 0) {
+            // 缓存上一次的投票数量
+            String cacheKey = "dm:votes:" + roomId;
+            Integer lastVoteCount = (Integer) redisTemplate.opsForValue().get(cacheKey);
+            if (lastVoteCount != null && lastVoteCount != votes.size()) {
+                redisTemplate.opsForValue().set(cacheKey, votes.size());
+                return true;
+            }
+            if (lastVoteCount == null) {
+                redisTemplate.opsForValue().set(cacheKey, votes.size());
+            }
         }
 
-        return log.toString();
+        return false;
     }
 
     @Override
-    public String startGame(String roomId, Long scriptId) {
+    public Flux<String> startGame(String roomId, Long scriptId) {
         initAgent(roomId, scriptId);
         return autoRun(roomId);
     }

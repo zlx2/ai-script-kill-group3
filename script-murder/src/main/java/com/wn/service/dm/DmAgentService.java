@@ -6,6 +6,8 @@
  **/
 package com.wn.service.dm;
 
+import reactor.core.publisher.Flux;
+
 public interface DmAgentService {
 
     void initAgent(String roomId, Long scriptId);
@@ -14,7 +16,7 @@ public interface DmAgentService {
 
     String executeDecision(String roomId, String decisionJson);
 
-    String autoRun(String roomId);
+    Flux<String> autoRun(String roomId);
 
-    String startGame(String roomId, Long scriptId);
+    Flux<String> startGame(String roomId, Long scriptId);
 }

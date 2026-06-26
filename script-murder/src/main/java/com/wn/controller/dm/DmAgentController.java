@@ -9,11 +9,15 @@ package com.wn.controller.dm;
 import com.wn.entity.R;
 import com.wn.service.dm.DmAgentService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
 
 @RestController
 @RequestMapping("/dm/agent")
 @RequiredArgsConstructor
+@Slf4j
 public class DmAgentController {
 
     private final DmAgentService dmAgentService;
@@ -36,15 +40,17 @@ public class DmAgentController {
         return new R(result);
     }
 
-    @PostMapping("/auto-run")
-    public R autoRun(@RequestParam String roomId) {
-        String result = dmAgentService.autoRun(roomId);
-        return new R(result);
+    @GetMapping(value = "/auto-run", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<String> autoRun(@RequestParam String roomId) {
+        return dmAgentService.autoRun(roomId)
+                .map(data -> "data: " + data + "\n\n")
+                .doOnSubscribe(subscription -> log.info("SSE连接建立, roomId={}", roomId))
+                .doOnComplete(() -> log.info("SSE连接关闭, roomId={}", roomId))
+                .doOnError(e -> log.error("SSE连接异常, roomId={}", roomId, e));
     }
 
-    @PostMapping("/start-game")
-    public R startGame(@RequestParam String roomId, @RequestParam Long scriptId) {
-        String result = dmAgentService.startGame(roomId, scriptId);
-        return new R("AI DM已接管游戏\n" + result);
+    @GetMapping(value = "/start-game", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<String> startGame(@RequestParam String roomId, @RequestParam Long scriptId) {
+        return dmAgentService.startGame(roomId, scriptId);
     }
 }
