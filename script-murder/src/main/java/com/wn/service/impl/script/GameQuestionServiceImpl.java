@@ -41,6 +41,7 @@ public class GameQuestionServiceImpl implements GameQuestionService {
 
     // ========== 玩家查询：剧本+角色ID 查题目 ==========
     @Override
+    @Transactional(readOnly = true)
     public R getQuestionByRole(Long scriptId, Long roleId) {
         // 使用你新写的JPA方法 findByScriptIdAndRoleIdOrderBySortNumAsc
         List<GameQuestionPO> poList = questionRepo.findByScriptIdAndRoleIdOrderBySortNumAsc(scriptId, roleId);

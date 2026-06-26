@@ -18,4 +18,9 @@ public class GameAnalysisEditDTO {
     private Long questionId;
     @NotBlank
     private String analysis;
+    @NotNull(message = "所属剧本ID不能为空")
+    private Long scriptId;
+
+    @NotNull(message = "所属角色ID不能为空")
+    private Long roleId;
 }

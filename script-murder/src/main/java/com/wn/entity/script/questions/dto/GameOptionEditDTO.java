@@ -15,6 +15,11 @@ public class GameOptionEditDTO {
     private Long id;
     @NotNull
     private Long questionId;
+    @NotNull(message = "所属剧本ID不能为空")
+    private Long scriptId;
+
+    @NotNull(message = "所属角色ID不能为空")
+    private Long roleId;
     @NotBlank
     private String optionCode;
     @NotBlank
