@@ -9,9 +9,11 @@ package com.wn.service.impl.dm;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import com.wn.agent.DmAgent;
+import com.wn.entity.R;
 import com.wn.entity.dm.*;
 import com.wn.entity.script.stage.ScriptStagePO;
 import com.wn.service.dm.*;
+import com.wn.service.script.GameQuestionService;
 import io.agentscope.harness.agent.HarnessAgent;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -46,6 +48,9 @@ public class DmAgentServiceImpl implements DmAgentService {
 
     @Resource
     private RedisTemplate<String, Object> redisTemplate;
+
+    @Resource
+    private GameQuestionService questionService;
 
     @Override
     public void initAgent(String roomId, Long scriptId) {
@@ -111,6 +116,18 @@ public class DmAgentServiceImpl implements DmAgentService {
                     Long scriptId = getScriptIdByRoomId(roomId);
                     scriptService.getScriptReview(scriptId);
                     yield "已发布复盘 - " + reason;
+                }
+                // ====== 新增题目相关 case ======
+                case "show_questions" -> {
+                    Long scriptId = getScriptIdByRoomId(roomId);
+                    R result = questionService.listAllQuestionByScript(scriptId);
+                    yield "已显示当前剧本的题目列表";
+                }
+                case "check_player_questions" -> {
+                    Long scriptId = getScriptIdByRoomId(roomId);
+                    Long roleId = decision.getLong("roleId");
+                    R result = questionService.getQuestionByRole(scriptId, roleId);
+                    yield "已查看角色" + roleId + "的题目";
                 }
                 case "wait" -> "等待中 - " + reason;
                 default -> "未知操作: " + action;
@@ -284,6 +301,12 @@ public class DmAgentServiceImpl implements DmAgentService {
             sb.append("\n=== 复盘信息 ===\n");
             sb.append("凶手角色ID: ").append(review.getMurdererRoleId()).append("\n");
         }
+
+        // ====== 新增题目信息 ======
+        R questionsResult = questionService.listAllQuestionByScript(scriptId);
+        List<?> questions = (List<?>) questionsResult.get("data");
+        sb.append("\n=== 题目列表 ===").append(questions.size()).append("题\n");
+        questions.forEach(q -> sb.append("- ").append(q).append("\n"));
 
         return sb.toString();
     }

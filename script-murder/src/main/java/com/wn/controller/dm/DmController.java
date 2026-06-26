@@ -9,7 +9,10 @@ package com.wn.controller.dm;
 import com.wn.entity.R;
 import com.wn.entity.dm.ScriptHintPO;
 import com.wn.entity.dm.ScriptReviewPO;
+import com.wn.entity.script.questions.dto.QuestionAddReq;
 import com.wn.service.dm.*;
+import com.wn.service.script.GameQuestionService;
+import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,6 +29,8 @@ public class DmController {
     private final DmActService actService;
     private final DmVoteService voteService;
     private final DmPlayerService playerService;
+    @Resource
+    private GameQuestionService questionService;
 
     // ==================== DM手册管理 ====================
 
@@ -196,5 +201,17 @@ public class DmController {
     public R updatePlayerTask(@RequestParam String roomId, @RequestParam Long playerId, @RequestBody(required = false) String taskProgress) {
         playerService.updatePlayerTask(roomId, playerId, taskProgress);
         return new R(200, "任务进度已更新");
+    }
+
+    // ==================== 题目管理 ====================
+
+    @GetMapping("/question/list/{scriptId}")
+    public R listQuestionByScript(@PathVariable Long scriptId) {
+        return questionService.listAllQuestionByScript(scriptId);
+    }
+
+    @PostMapping("/question/add")
+    public R addQuestion(@RequestBody QuestionAddReq req) {
+        return questionService.addQuestion(req);
     }
 }
