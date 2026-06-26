@@ -118,9 +118,28 @@ public class DmAgentServiceImpl implements DmAgentService {
 
     @Override
     public String autoRun(String roomId) {
-        String gameContext = buildGameContext(roomId);
-        String decision = analyzeGame(roomId, gameContext);
-        return executeDecision(roomId, decision);
+        StringBuilder log = new StringBuilder();
+
+        // 循环执行直到游戏结束
+        while (true) {
+            String gameContext = buildGameContext(roomId);
+            String decision = analyzeGame(roomId, gameContext);
+            String result = executeDecision(roomId, decision);
+
+            log.append(result).append("\n");
+
+            // 如果是结局或等待，停止循环
+            JSONObject decisionObj = JSON.parseObject(decision);
+            String action = decisionObj.getString("action");
+            if ("show_ending".equals(action) || "show_review".equals(action) || "wait".equals(action)) {
+                break;
+            }
+
+            // 等待一段时间再继续
+            try { Thread.sleep(10000); } catch (InterruptedException e) { break; }
+        }
+
+        return log.toString();
     }
 
     @Override
