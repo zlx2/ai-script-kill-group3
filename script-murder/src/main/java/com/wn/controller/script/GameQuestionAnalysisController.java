@@ -21,17 +21,17 @@ public class GameQuestionAnalysisController {
 
     private final GameQuestionAnalysisService analysisService;
 
-    @PostMapping("/save")
+    @PostMapping("/save")//测试通过
     public R saveAnalysis(@Valid @RequestBody GameAnalysisEditDTO dto) {
         return analysisService.saveAnalysis(dto);
     }
 
-    @GetMapping("/{questionId}")
+    @GetMapping("/{questionId}")//测试通过
     public R getAnalysisByQuestionId(@PathVariable Long questionId) {
         return analysisService.getAnalysisByQuestionId(questionId);
     }
 
-    @DeleteMapping("/{questionId}")
+    @DeleteMapping("/{questionId}")//测试通过，增加了事务管理
     public R deleteAnalysis(@PathVariable Long questionId) {
         return analysisService.deleteAnalysis(questionId);
     }

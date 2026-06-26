@@ -14,6 +14,7 @@ import com.wn.entity.script.questions.dto.GameAnalysisEditDTO;
 import com.wn.mapper.script.GameQuestionAnalysisRepository;
 import com.wn.service.script.GameQuestionAnalysisService;
 import jakarta.annotation.Resource;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,8 +36,7 @@ public class GameQuestionAnalysisServiceImpl implements GameQuestionAnalysisServ
         } else {
             po = new GameQuestionAnalysisPO();
         }
-        po.setQuestionId(dto.getQuestionId());
-        po.setAnalysis(dto.getAnalysis());
+        BeanUtils.copyProperties(dto, po);
         GameQuestionAnalysisPO save = analysisRepo.save(po);
         return R.success(save);
     }
@@ -51,6 +51,7 @@ public class GameQuestionAnalysisServiceImpl implements GameQuestionAnalysisServ
     }
 
     @Override
+    @Transactional
     public R deleteAnalysis(Long questionId) {
         analysisRepo.deleteByQuestionId(questionId);
         return R.success();
