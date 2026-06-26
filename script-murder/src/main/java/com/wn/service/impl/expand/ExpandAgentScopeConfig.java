@@ -6,6 +6,7 @@ import io.agentscope.extensions.redis.state.RedisAgentStateStore;
 import io.agentscope.harness.agent.HarnessAgent;
 import io.lettuce.core.RedisClient;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -14,6 +15,12 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 public class ExpandAgentScopeConfig {
+    @Value("${spring.data.redis.host}")
+    private String host;
+    @Value("${spring.data.redis.password}")
+    private String password;
+    @Value("${spring.data.redis.port}")
+    private String port;
     @Bean(name = "expandAgentModel")
     public OpenAIChatModel openAIChatModel() {
         return OpenAIChatModel.builder()
@@ -29,7 +36,7 @@ public class ExpandAgentScopeConfig {
 
     @Bean
     public RedisAgentStateStore redisAgentStateStore() {
-        RedisClient redisClient = RedisClient.create("redis://woniuxy@192.168.120.12:6379");
+        RedisClient redisClient = RedisClient.create("redis://" + password + "@" + host + ":" + port);
         return RedisAgentStateStore.builder()
                 .lettuceClient(redisClient)
                 .build();
