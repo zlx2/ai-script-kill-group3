@@ -10,6 +10,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.wn.entity.script.ScriptPO;
+import com.wn.service.script.ScriptService;
 import com.wn.websocket.WebSocketHandler;
 import com.wn.websocket.vo.WsMessage;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -65,6 +67,9 @@ public class DmAgentServiceImpl implements DmAgentService {
 
     @Resource
     private GameQuestionService questionService;
+
+    @Resource
+    private ScriptService scriptInfoService;
 
     @Override
     public void initAgent(String roomId, Long scriptId) {
@@ -314,6 +319,16 @@ public class DmAgentServiceImpl implements DmAgentService {
     @Override
     public Flux<String> startGame(String roomId, Long scriptId) {
         initAgent(roomId, scriptId);
+
+        ScriptPO script = scriptInfoService.getById(scriptId);
+        String scriptName = script != null ? script.getScriptName() : "未知剧本";
+
+        broadcastToRoom(roomId, "welcome", Map.of(
+                "message", "🎭 欢迎来到《" + scriptName + "》剧本杀！\n\n请各位玩家阅读自己的角色剧本，准备开始游戏。\n祝大家玩得开心！",
+                "scriptId", scriptId,
+                "scriptName", scriptName
+        ));
+
         return autoRun(roomId);
     }
 
