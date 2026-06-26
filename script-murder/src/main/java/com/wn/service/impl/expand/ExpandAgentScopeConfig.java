@@ -24,9 +24,9 @@ public class ExpandAgentScopeConfig {
     @Bean(name = "expandAgentModel")
     public OpenAIChatModel openAIChatModel() {
         return OpenAIChatModel.builder()
-                .apiKey(System.getenv("DEEPSEEK_API_KEY"))
-                .baseUrl("https://api.deepseek.com")
-                .modelName("deepseek-chat")
+                .apiKey(System.getenv("DEEPSEEK_API_KEY"))//看自己的环境变量
+                .baseUrl("https://api.deepseek.com")//官网找
+                .modelName("deepseek-chat")//官网找，这个好像7.24号就取消了，注意
                 .generateOptions(GenerateOptions.builder()
                         .temperature(0.7)
                         .maxTokens(4096)
@@ -48,7 +48,7 @@ public class ExpandAgentScopeConfig {
                 .name("ai-writer")
                 .sysPrompt("你是一个专业的文案扩写助手。请根据用户输入，提供生动、逻辑清晰的扩写内容。")
                 .model(model)
-                .stateStore(stateStore)
+                .stateStore(stateStore)//存储方案
                 .build();
     }
 }

@@ -1,5 +1,6 @@
 package com.wn.service.impl.expand;
 
+import com.wn.entity.expand.ExpandVO;
 import com.wn.service.expand.AiExpandService;
 import io.agentscope.core.agent.RuntimeContext;
 import io.agentscope.core.event.TextBlockDeltaEvent;
@@ -10,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @Slf4j
 @Service
@@ -25,23 +27,21 @@ public class AiExpandServiceImpl implements AiExpandService {
      * @return 扩写后的文本流
      */
     @Override
-    public Flux<String> expand(String originalText) {
-        // 1. 构造用户消息
+    public Flux<ExpandVO> expand(String originalText) {
+        //1. 构造用户消息
         String prompt = "请扩写以下内容，要求逻辑明了,语句通顺，表达清晰：\n" + originalText;
         Msg userMsg = Msg.builder()
                 .content(TextBlock.builder().text(prompt).build())
                 .build();
-        // 2. 调用 AgentScope 的流式 API
-        //    stream() 返回 Flux<AgentEvent>
-        return agent.streamEvents(userMsg, RuntimeContext.empty())
-                // 3. 过滤出文本增量事件（每个 Token）
+
+        // 2. 处理流式事件，过滤出TextBlockDeltaEvent，映射为ExpandVO，最后添加一个结束事件
+        return agent.streamEvents(userMsg)
                 .filter(event -> event instanceof TextBlockDeltaEvent)
-                // 4. 提取增量文本
-                .map(event -> ((TextBlockDeltaEvent) event).getDelta())
-                // 5. 异常处理：出错时返回错误信息
+                .map(event -> new ExpandVO(((TextBlockDeltaEvent) event).getDelta(), false))
+                .concatWith(Mono.just(new ExpandVO("", true)))
                 .onErrorResume(e -> {
                     log.error("AI 扩写流式处理出错", e);
-                    return Flux.just(" [服务出错，请稍后重试] ");
+                    return Flux.just(new ExpandVO(" [服务出错，请稍后重试] ", true));
                 })
                 .doOnComplete(() -> log.info("AI 扩写完成"))
                 .doOnCancel(() -> log.info("AI 扩写被取消"));

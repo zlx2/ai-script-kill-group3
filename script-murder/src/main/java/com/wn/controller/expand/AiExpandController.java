@@ -1,9 +1,11 @@
 package com.wn.controller.expand;
 
+import com.wn.entity.expand.ExpandVO;
 import com.wn.service.expand.AiExpandService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -21,9 +23,8 @@ public class AiExpandController {
     /**
      * 调用AI扩写接口
      */
-    @RequestMapping(value = "/expand", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<String> expand(@RequestParam("text") String text) {
+    @PostMapping(value = "/expand", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<ExpandVO> expand(@RequestParam("text") String text) {
         return aiExpandService.expand(text);
     }
-
 }

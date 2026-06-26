@@ -1,7 +1,8 @@
 package com.wn.service.expand;
 
+import com.wn.entity.expand.ExpandVO;
 import reactor.core.publisher.Flux;
 
 public interface AiExpandService {
-    Flux<String> expand(String text);
+    Flux<ExpandVO> expand(String text);
 }
