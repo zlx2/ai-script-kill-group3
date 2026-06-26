@@ -25,29 +25,43 @@ public class GameQuestionController {
 
     private final GameQuestionService gameQuestionService;
 
-    //加载答题题目列表
-    @GetMapping("/role/{roleType}")
-    public R getQuestionByRole(@PathVariable String roleType) {
-        return gameQuestionService.getQuestionByRole(roleType);
+    // 玩家查询：路径携带剧本ID、角色ID
+    @GetMapping("/{scriptId}/{roleId}")
+    public R getQuestionByRole(
+            @PathVariable Long scriptId,
+            @PathVariable Long roleId
+    ) {
+        return gameQuestionService.getQuestionByRole(scriptId, roleId);
     }
-    //一次性完成题目 + 选项 + 解析保存
+
+    // 后台新增
     @PostMapping("/add")
     public R addQuestion(@Valid @RequestBody QuestionAddReq req) {
         log.info("新增题目参数:{}", req);
         return gameQuestionService.addQuestion(req);
     }
-    //提交答案判分看解析
-    @PostMapping("/answer/submit")
-    public R submitAnswer(@Valid @RequestBody AnswerSubmitReq req) {
-        return gameQuestionService.submitAnswer(req);
+
+    // 答题提交，路径携带剧本、角色ID做校验
+    @PostMapping("/answer/submit/{scriptId}/{roleId}")
+    public R submitAnswer(
+            @Valid @RequestBody AnswerSubmitReq req,
+            @PathVariable Long scriptId,
+            @PathVariable Long roleId
+    ) {
+        return gameQuestionService.submitAnswer(req, scriptId, roleId);
     }
 
-    // 后台新增扩展接口
+    // 后台根据剧本查所有题目
+    @GetMapping("/script/{scriptId}/all")
+    public R listAllQuestionByScript(@PathVariable Long scriptId) {
+        return gameQuestionService.listAllQuestionByScript(scriptId);
+    }
+
     @GetMapping("/detail/{id}")
     public R getQuestionDetail(@PathVariable Long id) {
         return gameQuestionService.getQuestionDetail(id);
     }
-    //一次性完成题目 + 选项 + 解析编辑题目
+
     @PutMapping("/edit/{id}")
     public R editQuestion(@PathVariable Long id, @Valid @RequestBody QuestionAddReq req) {
         return gameQuestionService.editQuestion(id, req);
@@ -56,10 +70,5 @@ public class GameQuestionController {
     @DeleteMapping("/{id}")
     public R deleteQuestion(@PathVariable Long id) {
         return gameQuestionService.deleteQuestion(id);
-    }
-
-    @GetMapping("/all")
-    public R listAllQuestion() {
-        return gameQuestionService.listAllQuestion();
     }
 }

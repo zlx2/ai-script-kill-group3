@@ -11,21 +11,24 @@ import com.wn.entity.script.questions.dto.QuestionAddReq;
 import com.wn.entity.script.questions.vo.AnswerSubmitReq;
 
 public interface GameQuestionService {
-    // 根据角色获取所有题目（前端玩家查询）
-    R getQuestionByRole(String roleType);
+    // 玩家端：根据剧本+角色ID查询题目
+    R getQuestionByRole(Long scriptId, Long roleId);
 
-    // 后台新增题目
+    // 后台新增完整题目（携带剧本、角色ID）
     R addQuestion(QuestionAddReq req);
 
-    // 提交答题判分
-    R submitAnswer(AnswerSubmitReq req);
-    // 后台管理 新增扩展方法
-    // 根据id查询完整题目（含答案、解析，管理端）
+    // 玩家提交答题判分（增加剧本、角色做权限校验）
+    R submitAnswer(AnswerSubmitReq req, Long scriptId, Long roleId);
+
+    // 后台：单条详情
     R getQuestionDetail(Long id);
-    // 修改题目
+
+    // 后台：编辑题目
     R editQuestion(Long id, QuestionAddReq req);
-    // 删除题目（级联删除选项、解析）
+
+    // 后台：删除题目（级联删选项、解析）
     R deleteQuestion(Long id);
-    // 查询所有题目分页/全量
-    R listAllQuestion();
+
+    // 后台：根据剧本查询全部题目
+    R listAllQuestionByScript(Long scriptId);
 }

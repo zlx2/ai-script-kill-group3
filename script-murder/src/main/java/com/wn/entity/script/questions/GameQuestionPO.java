@@ -25,8 +25,11 @@ public class GameQuestionPO {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "role_type", nullable = false)
-    private String roleType;
+    @Column(name = "script_id", nullable = false)
+    private Long scriptId;
+
+    @Column(name = "role_id", nullable = false)
+    private Long roleId;
 
     @Column(name = "question_title", nullable = false)
     private String questionTitle;

@@ -21,6 +21,12 @@ public class GameQuestionAnalysisPO {
     @Column(name = "question_id", nullable = false)
     private Long questionId;
 
+    @Column(name = "script_id", nullable = false)
+    private Long scriptId;
+
+    @Column(name = "role_id", nullable = false)
+    private Long roleId;
+
     @Column(name = "analysis", nullable = false, columnDefinition = "TEXT")
     private String analysis;
 }

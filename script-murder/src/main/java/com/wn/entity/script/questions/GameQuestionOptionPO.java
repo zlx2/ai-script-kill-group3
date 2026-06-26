@@ -21,6 +21,12 @@ public class GameQuestionOptionPO {
     @Column(name = "question_id", nullable = false)
     private Long questionId;
 
+    @Column(name = "script_id", nullable = false)
+    private Long scriptId;
+
+    @Column(name = "role_id", nullable = false)
+    private Long roleId;
+
     @Column(name = "option_code", nullable = false)
     private String optionCode;
 

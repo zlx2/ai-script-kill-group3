@@ -13,8 +13,11 @@ import java.util.List;
 
 @Data
 public class QuestionAddReq {
-    @NotBlank(message = "角色标识不能为空")
-    private String roleType;
+    @NotNull(message = "所属剧本ID不能为空")
+    private Long scriptId;
+
+    @NotNull(message = "所属角色ID不能为空")
+    private Long roleId;
 
     @NotBlank(message = "题干不能为空")
     private String questionTitle;

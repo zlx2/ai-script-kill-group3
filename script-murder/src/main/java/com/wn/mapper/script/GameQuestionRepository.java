@@ -14,6 +14,8 @@ import java.util.List;
 
 @Repository
 public interface GameQuestionRepository extends JpaRepository<GameQuestionPO, Long> {
-    // 根据角色查询题目，按序号升序
-    List<GameQuestionPO> findByRoleTypeOrderBySortNumAsc(String roleType);
+    // 根据剧本+角色ID查询题目
+    List<GameQuestionPO> findByScriptIdAndRoleIdOrderBySortNumAsc(Long scriptId, Long roleId);
+    // 根据剧本查询所有题目
+    List<GameQuestionPO> findByScriptId(Long scriptId);
 }
