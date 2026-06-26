@@ -31,7 +31,8 @@ public class WebConfig implements WebMvcConfigurer {
                         "/auth/login",
                         "/auth/register",
                         "/auth/code",
-                        "/game/**"
+                        "/game/**",
+                        "/ai/expand"
                 ));
     }
 }
