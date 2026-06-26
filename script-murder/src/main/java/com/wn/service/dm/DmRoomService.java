@@ -26,4 +26,6 @@ public interface DmRoomService {
 
     void setSearchRoundCount(String roomId, Integer count);
     void setChatDuration(String roomId, Integer minutes);
+
+    void sendWelcomeMessage(String roomId, Long scriptId);
 }
