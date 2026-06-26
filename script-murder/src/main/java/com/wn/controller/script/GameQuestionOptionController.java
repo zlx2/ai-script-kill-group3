@@ -21,27 +21,27 @@ import java.util.List;
 public class GameQuestionOptionController {
     private final GameQuestionOptionService optionService;
 
-    @PostMapping("/batch")
+    @PostMapping("/batch")//测试通过
     public R batchAddOption(@Valid @RequestBody List<GameOptionEditDTO> dtoList) {
         return optionService.batchAddOption(dtoList);
     }
 
-    @PutMapping("/edit")
+    @PutMapping("/edit")//测试通过
     public R editOption(@Valid @RequestBody GameOptionEditDTO dto) {
         return optionService.editOption(dto);
     }
 
-    @DeleteMapping("/{optionId}")
+    @DeleteMapping("/{optionId}")//测试通过
     public R deleteOption(@PathVariable Long optionId) {
         return optionService.deleteOption(optionId);
     }
 
-    @GetMapping("/list/{questionId}")
+    @GetMapping("/list/{questionId}")//测试通过
     public R listOptionByQuestionId(@PathVariable Long questionId) {
         return optionService.listOptionByQuestionId(questionId);
     }
 
-    @GetMapping("/{optionId}")
+    @GetMapping("/{optionId}")//测试通过
     public R getOptionById(@PathVariable Long optionId) {
         return optionService.getOptionById(optionId);
     }
