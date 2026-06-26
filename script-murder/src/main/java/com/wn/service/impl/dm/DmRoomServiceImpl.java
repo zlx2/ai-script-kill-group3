@@ -26,6 +26,7 @@ public class DmRoomServiceImpl implements DmRoomService {
     public DmRoomStatePO initRoomState(String roomId, Long scriptId) {
         DmRoomStatePO state = new DmRoomStatePO();
         state.setRoomId(roomId);
+        state.setScriptId(scriptId);
         state.setCurrentAct(1);
         return roomStateMapper.save(state);
     }

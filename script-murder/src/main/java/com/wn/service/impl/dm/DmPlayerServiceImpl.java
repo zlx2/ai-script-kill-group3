@@ -8,8 +8,10 @@ package com.wn.service.impl.dm;
 
 import com.wn.entity.dm.DmPlayerTaskPO;
 import com.wn.entity.room.RoomPlayerPO;
+import com.wn.entity.script.stage.RoomUserRolePO;
 import com.wn.mapper.dm.DmPlayerTaskMapper;
 import com.wn.mapper.room.RoomPlayerMapper;
+import com.wn.mapper.script.RoomUserRoleMapper;
 import com.wn.service.dm.DmPlayerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,18 +21,30 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class DmPlayerServiceImpl implements DmPlayerService {
 
+    // 注入队友的 Mapper
+    private final RoomUserRoleMapper roomUserRoleMapper;
+
     private final RoomPlayerMapper roomPlayerMapper;
     private final DmPlayerTaskMapper playerTaskMapper;
 
     @Override
     @Transactional
-    public void assignRole(String roomId, Long playerId, Long roleId) {
+    public void assignRole(String roomId, Long playerId, Long roleId, Long scriptId) {
+        // 1. 修改 RoomPlayerPO 的 roleId（兼容原有逻辑）
         RoomPlayerPO player = roomPlayerMapper
                 .findByRoomIdAndUserIdAndLeaveTimeIsNull(roomId, playerId);
         if (player != null) {
             player.setRoleId(roleId);
             roomPlayerMapper.save(player);
         }
+
+        // 2. 同时创建 RoomUserRolePO（使用队友的表）
+        RoomUserRolePO roomUserRole = new RoomUserRolePO();
+        roomUserRole.setRoomId(roomId);
+        roomUserRole.setUserId(playerId);
+        roomUserRole.setScriptId(scriptId);
+        roomUserRole.setRoleId(roleId);
+        roomUserRoleMapper.save(roomUserRole);
     }
 
     @Override

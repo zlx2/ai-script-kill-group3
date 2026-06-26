@@ -27,6 +27,9 @@ public class DmRoomStatePO {
     @Column(name = "current_act")
     private Integer currentAct = 1;
 
+    @Column(name = "script_id")
+    private Long scriptId;
+
     ///是否开启私聊，默认值 = 1 表示开启 0 表示关闭，玩家只能在公开频道聊天
     @Column(name = "is_private_chat_enabled")
     private Byte isPrivateChatEnabled = 1;

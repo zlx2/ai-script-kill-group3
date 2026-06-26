@@ -4,7 +4,7 @@ import com.wn.entity.dm.DmPlayerTaskPO;
 
 public interface DmPlayerService {
 
-    void assignRole(String roomId, Long playerId, Long roleId);
+    void assignRole(String roomId, Long playerId, Long roleId, Long scriptId);
 
     void mutePlayer(String roomId, Long playerId);
     void unmutePlayer(String roomId, Long playerId);
