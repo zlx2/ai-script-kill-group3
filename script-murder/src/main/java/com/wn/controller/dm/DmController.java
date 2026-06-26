@@ -51,6 +51,11 @@ public class DmController {
     }
 
     // ==================== 房间状态管理 ====================
+    @PostMapping("/room/welcome")
+    public R sendWelcomeMessage(@RequestParam String roomId, @RequestParam Long scriptId) {
+        roomService.sendWelcomeMessage(roomId, scriptId);
+        return new R(200, "欢迎消息已发送");
+    }
 
     @GetMapping("/room/state")
     public R getRoomState(@RequestParam String roomId) {
