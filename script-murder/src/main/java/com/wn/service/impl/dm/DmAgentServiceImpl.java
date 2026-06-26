@@ -6,24 +6,37 @@
  **/
 package com.wn.service.impl.dm;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import com.wn.entity.script.ScriptPO;
+import com.wn.service.script.ScriptService;
+import com.wn.websocket.WebSocketHandler;
+import com.wn.websocket.vo.WsMessage;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Service;
+
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import com.wn.agent.DmAgent;
 import com.wn.entity.R;
-import com.wn.entity.dm.*;
+import com.wn.entity.dm.DmRoomStatePO;
+import com.wn.entity.dm.RoomVotePO;
+import com.wn.entity.dm.ScriptHintPO;
+import com.wn.entity.dm.ScriptReviewPO;
 import com.wn.entity.script.stage.ScriptStagePO;
-import com.wn.service.dm.*;
+import com.wn.service.dm.DmActService;
+import com.wn.service.dm.DmAgentService;
+import com.wn.service.dm.DmRoomService;
+import com.wn.service.dm.DmScriptService;
+import com.wn.service.dm.DmVoteService;
 import com.wn.service.script.GameQuestionService;
+
 import io.agentscope.harness.agent.HarnessAgent;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @Service
@@ -44,6 +57,9 @@ public class DmAgentServiceImpl implements DmAgentService {
     @Resource
     private DmVoteService voteService;
 
+    @Resource
+    private WebSocketHandler webSocketHandler;
+
     private final Map<String, DmAgent> agentMap = new HashMap<>();
 
     @Resource
@@ -51,6 +67,9 @@ public class DmAgentServiceImpl implements DmAgentService {
 
     @Resource
     private GameQuestionService questionService;
+
+    @Resource
+    private ScriptService scriptInfoService;
 
     @Override
     public void initAgent(String roomId, Long scriptId) {
@@ -88,6 +107,10 @@ public class DmAgentServiceImpl implements DmAgentService {
             return switch (action) {
                 case "advance_act" -> {
                     int newAct = actService.advanceAct(roomId);
+                    broadcastToRoom(roomId, "act_change", Map.of(
+                            "act", newAct,
+                            "message", "已推进到第" + newAct + "幕"
+                    ));
                     yield "已推进到第" + newAct + "幕 - " + reason;
                 }
                 case "grant_clue", "grant_clue_to_all" -> {
@@ -95,14 +118,32 @@ public class DmAgentServiceImpl implements DmAgentService {
                 }
                 case "send_hint" -> {
                     Byte level = decision.getByte("level");
-                    yield "AI建议发送" + getHintLevelDesc(level) + "提示 - " + reason;
+                    Long scriptId = getScriptIdByRoomId(roomId);
+                    List<ScriptHintPO> hints = scriptService.getScriptHintsByLevel(scriptId, level);
+                    if (!hints.isEmpty()) {
+                        String hintContent = hints.get(0).getHintContent();
+                        broadcastToRoom(roomId, "hint", Map.of(
+                                "level", level,
+                                "levelDesc", getHintLevelDesc(level),
+                                "content", hintContent
+                        ));
+                        yield "已发送" + getHintLevelDesc(level) + "提示: " + hintContent;
+                    } else {
+                        yield "没有找到" + getHintLevelDesc(level) + "提示";
+                    }
                 }
                 case "start_voting" -> {
                     voteService.startVoting(roomId);
+                    broadcastToRoom(roomId, "voting_start", Map.of(
+                            "message", "投票已开启，请投出你认为的凶手"
+                    ));
                     yield "已开启投票 - " + reason;
                 }
                 case "end_voting" -> {
                     voteService.endVoting(roomId);
+                    broadcastToRoom(roomId, "voting_end", Map.of(
+                            "message", "投票已结束"
+                    ));
                     yield "已结束投票 - " + reason;
                 }
                 case "show_ending" -> {
@@ -110,14 +151,28 @@ public class DmAgentServiceImpl implements DmAgentService {
                     Long scriptId = getScriptIdByRoomId(roomId);
                     ScriptReviewPO review = scriptService.getScriptReview(scriptId);
                     String ending = isCorrect ? review.getCorrectEnding() : review.getWrongEnding();
+                    broadcastToRoom(roomId, "ending", Map.of(
+                            "isCorrect", isCorrect,
+                            "ending", ending
+                    ));
                     yield (isCorrect ? "正确结局：" : "错误结局：") + ending;
                 }
                 case "show_review" -> {
                     Long scriptId = getScriptIdByRoomId(roomId);
-                    scriptService.getScriptReview(scriptId);
-                    yield "已发布复盘 - " + reason;
+                    ScriptReviewPO review = scriptService.getScriptReview(scriptId);
+                    if (review != null) {
+                        broadcastToRoom(roomId, "review", Map.of(
+                                "murdererRoleId", review.getMurdererRoleId(),
+                                "fullReview", review.getFullReview(),
+                                "trickExplanation", review.getTrickExplanation(),
+                                "timeline", review.getTimeline(),
+                                "motivation", review.getMotivation()
+                        ));
+                        yield "已发布复盘";
+                    } else {
+                        yield "该剧本没有复盘信息";
+                    }
                 }
-                // ====== 新增题目相关 case ======
                 case "show_questions" -> {
                     Long scriptId = getScriptIdByRoomId(roomId);
                     R result = questionService.listAllQuestionByScript(scriptId);
@@ -147,19 +202,15 @@ public class DmAgentServiceImpl implements DmAgentService {
 
             while (iteration++ < maxIterations && !gameEnded) {
                 try {
-                    // 1. 构建上下文
                     String gameContext = buildGameContext(roomId);
 
-                    // 2. AI 决策
                     String decision = analyzeGame(roomId, gameContext);
                     JSONObject decisionObj = JSON.parseObject(decision);
                     String action = decisionObj.getString("action");
                     String reason = decisionObj.getString("reason");
 
-                    // 3. 执行决策
                     String result = executeDecision(roomId, decision);
 
-                    // 4. 推送事件
                     Map<String, Object> eventData = new HashMap<>();
                     eventData.put("iteration", iteration);
                     eventData.put("action", action);
@@ -167,41 +218,36 @@ public class DmAgentServiceImpl implements DmAgentService {
                     eventData.put("result", result);
                     eventData.put("currentState", buildCurrentState(roomId));
                     eventData.put("timestamp", System.currentTimeMillis());
-                    eventData.put("waitingForPlayer", "wait".equals(action)); // 告诉前端是否需要等待
+                    eventData.put("waitingForPlayer", "wait".equals(action));
 
                     sink.next(JSON.toJSONString(eventData));
                     log.info("AI DM 第{}轮决策: action={}, reason={}", iteration, action, reason);
 
-                    // 5. 终局判断
                     if ("show_ending".equals(action) || "show_review".equals(action)) {
                         log.info("AI DM 运行结束: game over, roomId={}", roomId);
                         gameEnded = true;
                         break;
                     }
 
-                    // 6. 🔥 wait 时保持连接，等待玩家操作
                     if ("wait".equals(action)) {
                         log.info("AI DM 等待玩家操作, roomId={}", roomId);
 
-                        // 🔥 推送一个"等待中"状态
                         Map<String, Object> waitData = new HashMap<>();
                         waitData.put("type", "waiting");
                         waitData.put("message", "等待玩家操作...");
                         waitData.put("timestamp", System.currentTimeMillis());
                         sink.next(JSON.toJSONString(waitData));
 
-                        // 🔥 轮询检查状态变化，而不是直接结束
                         int checkCount = 0;
-                        while (checkCount < 20) { // 最多等待 20 * 5 = 100 秒
+                        while (checkCount < 20) {
                             try {
-                                Thread.sleep(5000); // 每5秒检查一次
+                                Thread.sleep(5000);
                                 checkCount++;
 
-                                // 检查是否有新变化（投票完成/玩家发言等）
                                 String newContext = buildGameContext(roomId);
                                 if (hasGameStateChanged(roomId, newContext)) {
                                     log.info("检测到游戏状态变化, roomId={}, 继续运行", roomId);
-                                    break; // 退出内层循环，继续外层循环
+                                    break;
                                 }
                             } catch (InterruptedException e) {
                                 Thread.currentThread().interrupt();
@@ -210,17 +256,15 @@ public class DmAgentServiceImpl implements DmAgentService {
                         }
 
                         if (checkCount >= 20) {
-                            // 超时，发送提示并继续
                             Map<String, Object> timeoutData = new HashMap<>();
                             timeoutData.put("type", "timeout");
                             timeoutData.put("message", "等待超时，继续检查...");
                             sink.next(JSON.toJSONString(timeoutData));
                         }
 
-                        continue; // 继续外层循环
+                        continue;
                     }
 
-                    // 7. 非 wait 动作，等待后继续
                     try {
                         Thread.sleep(10000);
                     } catch (InterruptedException e) {
@@ -244,24 +288,29 @@ public class DmAgentServiceImpl implements DmAgentService {
     }
 
     private boolean hasGameStateChanged(String roomId, String newContext) {
-        // 简单实现：比较投票数量是否变化
         DmRoomStatePO state = roomService.getRoomState(roomId);
         if (state == null) return false;
 
-        // 检查投票状态变化
         List<RoomVotePO> votes = voteService.getVoteResults(roomId);
-        // 如果是投票阶段且投票人数增加了，返回 true
-        if (state.getIsVoting() == 1 && votes.size() > 0) {
-            // 缓存上一次的投票数量
-            String cacheKey = "dm:votes:" + roomId;
-            Integer lastVoteCount = (Integer) redisTemplate.opsForValue().get(cacheKey);
-            if (lastVoteCount != null && lastVoteCount != votes.size()) {
-                redisTemplate.opsForValue().set(cacheKey, votes.size());
-                return true;
-            }
-            if (lastVoteCount == null) {
-                redisTemplate.opsForValue().set(cacheKey, votes.size());
-            }
+        String cacheKey = "dm:votes:" + roomId;
+        Integer lastVoteCount = (Integer) redisTemplate.opsForValue().get(cacheKey);
+
+        if (lastVoteCount != null && lastVoteCount != votes.size()) {
+            redisTemplate.opsForValue().set(cacheKey, votes.size());
+            return true;
+        }
+        if (lastVoteCount == null && votes.size() > 0) {
+            redisTemplate.opsForValue().set(cacheKey, votes.size());
+        }
+
+        String actCacheKey = "dm:act:" + roomId;
+        Integer lastAct = (Integer) redisTemplate.opsForValue().get(actCacheKey);
+        if (lastAct != null && lastAct != state.getCurrentAct()) {
+            redisTemplate.opsForValue().set(actCacheKey, state.getCurrentAct());
+            return true;
+        }
+        if (lastAct == null) {
+            redisTemplate.opsForValue().set(actCacheKey, state.getCurrentAct());
         }
 
         return false;
@@ -270,6 +319,16 @@ public class DmAgentServiceImpl implements DmAgentService {
     @Override
     public Flux<String> startGame(String roomId, Long scriptId) {
         initAgent(roomId, scriptId);
+
+        ScriptPO script = scriptInfoService.getById(scriptId);
+        String scriptName = script != null ? script.getScriptName() : "未知剧本";
+
+        broadcastToRoom(roomId, "welcome", Map.of(
+                "message", "🎭 欢迎来到《" + scriptName + "》剧本杀！\n\n请各位玩家阅读自己的角色剧本，准备开始游戏。\n祝大家玩得开心！",
+                "scriptId", scriptId,
+                "scriptName", scriptName
+        ));
+
         return autoRun(roomId);
     }
 
@@ -302,11 +361,18 @@ public class DmAgentServiceImpl implements DmAgentService {
             sb.append("凶手角色ID: ").append(review.getMurdererRoleId()).append("\n");
         }
 
-        // ====== 新增题目信息 ======
         R questionsResult = questionService.listAllQuestionByScript(scriptId);
         List<?> questions = (List<?>) questionsResult.get("data");
         sb.append("\n=== 题目列表 ===").append(questions.size()).append("题\n");
-        questions.forEach(q -> sb.append("- ").append(q).append("\n"));
+        questions.forEach(q -> {
+            try {
+                JSONObject qObj = JSON.parseObject(JSON.toJSONString(q));
+                sb.append("- ").append(qObj.getString("questionTitle"))
+                        .append("(角色ID:").append(qObj.getLong("roleId")).append(")\n");
+            } catch (Exception e) {
+                sb.append("- ").append(q).append("\n");
+            }
+        });
 
         return sb.toString();
     }
@@ -350,5 +416,24 @@ public class DmAgentServiceImpl implements DmAgentService {
     private Long getScriptIdByRoomId(String roomId) {
         DmRoomStatePO state = roomService.getRoomState(roomId);
         return state != null ? state.getScriptId() : 1L;
+    }
+
+    private void broadcastToRoom(String roomId, String type, Map<String, Object> data) {
+        try {
+            Map<String, Object> messageData = new HashMap<>(data);
+            messageData.put("type", type);
+            messageData.put("timestamp", System.currentTimeMillis());
+
+            WsMessage<Map<String, Object>> message = WsMessage.<Map<String, Object>>builder()
+                    .type(type)
+                    .data(messageData)
+                    .timestamp(System.currentTimeMillis())
+                    .build();
+
+            webSocketHandler.broadcastToRoom(roomId, message);
+            log.info("AI DM 广播消息: type={}, roomId={}", type, roomId);
+        } catch (Exception e) {
+            log.error("AI DM 广播失败", e);
+        }
     }
 }

@@ -1,6 +1,6 @@
 /**
  * @Author: 弗
- * @Description:
+ * @Description:问题解析
  * @DateTime: 2026/6/25 18:53
  * @Component:
  **/
@@ -20,7 +20,6 @@ import org.springframework.web.bind.annotation.*;
 public class GameQuestionAnalysisController {
 
     private final GameQuestionAnalysisService analysisService;
-
     @PostMapping("/save")//测试通过
     public R saveAnalysis(@Valid @RequestBody GameAnalysisEditDTO dto) {
         return analysisService.saveAnalysis(dto);

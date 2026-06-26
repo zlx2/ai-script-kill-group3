@@ -13,4 +13,6 @@ import lombok.Data;
 public class QuestionOptionVO {
     private String optionCode;
     private String optionContent;
+    private Integer score;
+    private Integer isCorrect;
 }

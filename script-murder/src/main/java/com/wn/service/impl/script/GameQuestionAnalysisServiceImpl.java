@@ -18,6 +18,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -29,25 +30,28 @@ public class GameQuestionAnalysisServiceImpl implements GameQuestionAnalysisServ
     @Override
     @Transactional(rollbackFor = Exception.class)
     public R saveAnalysis(GameAnalysisEditDTO dto) {
-        Optional<GameQuestionAnalysisPO> old = analysisRepo.findByQuestionId(dto.getQuestionId());
+        List<GameQuestionAnalysisPO> oldList = analysisRepo.findByQuestionId(dto.getQuestionId());
         GameQuestionAnalysisPO po;
-        if (old.isPresent()) {
-            po = old.get();
+        if (!oldList.isEmpty()) {
+            // 取第一条旧解析更新
+            po = oldList.get(0);
         } else {
             po = new GameQuestionAnalysisPO();
         }
         BeanUtils.copyProperties(dto, po);
+        po.setQuestionId(dto.getQuestionId());
         GameQuestionAnalysisPO save = analysisRepo.save(po);
         return R.success(save);
     }
 
     @Override
     public R getAnalysisByQuestionId(Long questionId) {
-        Optional<GameQuestionAnalysisPO> optional = analysisRepo.findByQuestionId(questionId);
-        if (optional.isEmpty()) {
+        List<GameQuestionAnalysisPO> list = analysisRepo.findByQuestionId(questionId);
+        if (list.isEmpty()) {
             return R.error("解析不存在");
         }
-        return R.success(optional.get());
+        // 取第一条返回
+        return R.success(list.get(0));
     }
 
     @Override

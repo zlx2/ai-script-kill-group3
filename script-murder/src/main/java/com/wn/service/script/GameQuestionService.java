@@ -9,6 +9,7 @@ package com.wn.service.script;
 import com.wn.entity.R;
 import com.wn.entity.script.questions.dto.QuestionAddReq;
 import com.wn.entity.script.questions.vo.AnswerSubmitReq;
+import com.wn.entity.script.questions.vo.QuestionDetailVO;
 
 public interface GameQuestionService {
     // 玩家端：根据剧本+角色ID查询题目

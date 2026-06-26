@@ -14,6 +14,7 @@ import com.wn.entity.script.questions.dto.GameOptionEditDTO;
 import com.wn.mapper.script.GameQuestionOptionRepository;
 import com.wn.service.script.GameQuestionOptionService;
 import jakarta.annotation.Resource;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,14 +32,9 @@ public class GameQuestionOptionServiceImpl implements GameQuestionOptionService 
     @Transactional(rollbackFor = Exception.class)
     public R batchAddOption(List<GameOptionEditDTO> dtoList) {
         List<GameQuestionOptionPO> poList = new ArrayList<>();
-        for (int i = 0; i < dtoList.size(); i++) {
-            GameOptionEditDTO dto = dtoList.get(i);
-            GameQuestionOptionPO po = new GameQuestionOptionPO();
-            po.setQuestionId(dto.getQuestionId());
-            po.setOptionCode(dto.getOptionCode());
-            po.setOptionContent(dto.getOptionContent());
-            po.setIsCorrect(dto.getIsCorrect());
-            po.setScore(dto.getScore());
+        for (GameOptionEditDTO dto : dtoList) {
+            // 调用统一的转换方法，代替手动 set
+            GameQuestionOptionPO po = dto2PO(dto);
             poList.add(po);
         }
         List<GameQuestionOptionPO> saveList = optionRepo.saveAll(poList);
@@ -46,22 +42,22 @@ public class GameQuestionOptionServiceImpl implements GameQuestionOptionService 
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public R editOption(GameOptionEditDTO dto) {
         Optional<GameQuestionOptionPO> optional = optionRepo.findById(dto.getId());
         if (optional.isEmpty()) {
             return R.error("选项不存在");
         }
         GameQuestionOptionPO po = optional.get();
-        po.setQuestionId(dto.getQuestionId());
-        po.setOptionCode(dto.getOptionCode());
-        po.setOptionContent(dto.getOptionContent());
-        po.setIsCorrect(dto.getIsCorrect());
-        po.setScore(dto.getScore());
+        // 用 BeanUtils 批量复制属性，代替一个个手动 set
+        // 注意：这里是更新已有对象，所以把 dto 的属性复制到 po 上
+        BeanUtils.copyProperties(dto, po);
         GameQuestionOptionPO update = optionRepo.save(po);
         return R.success(update);
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public R deleteOption(Long optionId) {
         optionRepo.deleteById(optionId);
         return R.success();
@@ -80,5 +76,12 @@ public class GameQuestionOptionServiceImpl implements GameQuestionOptionService 
             return R.error("选项不存在");
         }
         return R.success(optional.get());
+    }
+
+
+    private GameQuestionOptionPO dto2PO(GameOptionEditDTO dto) {
+        GameQuestionOptionPO po = new GameQuestionOptionPO();
+        BeanUtils.copyProperties(dto, po);
+        return po;
     }
 }

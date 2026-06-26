@@ -1,6 +1,6 @@
 /**
  * @Author: 弗
- * @Description:
+ * @Description:问题查询，提交返回答案解析，新增，修改，删除，题目详情
  * @DateTime: 2026/6/25 17:47
  * @Component:
  **/
@@ -56,17 +56,17 @@ public class GameQuestionController {
     public R listAllQuestionByScript(@PathVariable Long scriptId) {
         return gameQuestionService.listAllQuestionByScript(scriptId);
     }
-
+    //获取题目详情
     @GetMapping("/detail/{id}")
     public R getQuestionDetail(@PathVariable Long id) {
         return gameQuestionService.getQuestionDetail(id);
     }
-
+    //编辑题目
     @PutMapping("/edit/{id}")
     public R editQuestion(@PathVariable Long id, @Valid @RequestBody QuestionAddReq req) {
         return gameQuestionService.editQuestion(id, req);
     }
-
+    //删除题目
     @DeleteMapping("/{id}")
     public R deleteQuestion(@PathVariable Long id) {
         return gameQuestionService.deleteQuestion(id);

@@ -7,16 +7,12 @@
 package com.wn.controller.dm;
 
 import com.wn.entity.R;
-import com.wn.entity.dm.ScriptHintPO;
-import com.wn.entity.dm.ScriptReviewPO;
-import com.wn.entity.script.questions.dto.QuestionAddReq;
 import com.wn.service.dm.*;
 import com.wn.service.script.GameQuestionService;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -39,12 +35,6 @@ public class DmController {
         return new R(scriptService.getScriptStages(scriptId));
     }
 
-    @PostMapping("/script/hints")
-    public R saveHints(@RequestParam Long scriptId, @RequestBody List<ScriptHintPO> hints) {
-        scriptService.saveScriptHints(scriptId, hints);
-        return new R(200, "保存成功");
-    }
-
     @GetMapping("/script/hints")
     public R getHints(@RequestParam Long scriptId) {
         return new R(scriptService.getScriptHints(scriptId));
@@ -55,22 +45,16 @@ public class DmController {
         return new R(scriptService.getScriptHintsByLevel(scriptId, level));
     }
 
-    @PostMapping("/script/review")
-    public R saveReview(@RequestParam Long scriptId, @RequestBody ScriptReviewPO review) {
-        scriptService.saveScriptReview(scriptId, review);
-        return new R(200, "保存成功");
-    }
-
     @GetMapping("/script/review")
     public R getReview(@RequestParam Long scriptId) {
         return new R(scriptService.getScriptReview(scriptId));
     }
 
     // ==================== 房间状态管理 ====================
-
-    @PostMapping("/room/init")
-    public R initRoom(@RequestParam String roomId, @RequestParam Long scriptId) {
-        return new R(roomService.initRoomState(roomId, scriptId));
+    @PostMapping("/room/welcome")
+    public R sendWelcomeMessage(@RequestParam String roomId, @RequestParam Long scriptId) {
+        roomService.sendWelcomeMessage(roomId, scriptId);
+        return new R(200, "欢迎消息已发送");
     }
 
     @GetMapping("/room/state")
@@ -152,12 +136,6 @@ public class DmController {
         return new R(200, "投票已结束");
     }
 
-    @PostMapping("/vote/submit")
-    public R submitVote(@RequestParam String roomId, @RequestParam Long playerId, @RequestParam Long voteRoleId) {
-        voteService.submitVote(roomId, playerId, voteRoleId);
-        return new R(200, "投票已提交");
-    }
-
     @GetMapping("/vote/results")
     public R getVoteResults(@RequestParam String roomId) {
         return new R(voteService.getVoteResults(roomId));
@@ -210,8 +188,13 @@ public class DmController {
         return questionService.listAllQuestionByScript(scriptId);
     }
 
-    @PostMapping("/question/add")
-    public R addQuestion(@RequestBody QuestionAddReq req) {
-        return questionService.addQuestion(req);
+    @GetMapping("/question/detail/{id}")
+    public R getQuestionDetail(@PathVariable Long id) {
+        return questionService.getQuestionDetail(id);
+    }
+
+    @GetMapping("/question/role/{scriptId}/{roleId}")
+    public R getQuestionByRole(@PathVariable Long scriptId, @PathVariable Long roleId) {
+        return questionService.getQuestionByRole(scriptId, roleId);
     }
 }

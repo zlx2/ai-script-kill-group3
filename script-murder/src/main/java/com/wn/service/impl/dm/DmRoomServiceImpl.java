@@ -9,6 +9,9 @@ package com.wn.service.impl.dm;
 import com.wn.entity.dm.DmRoomStatePO;
 import com.wn.mapper.dm.DmRoomStateMapper;
 import com.wn.service.dm.DmRoomService;
+import com.wn.websocket.WebSocketHandler;
+import com.wn.websocket.vo.WsMessage;
+import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +24,12 @@ public class DmRoomServiceImpl implements DmRoomService {
 
     private final DmRoomStateMapper roomStateMapper;
 
+    @Resource
+    private WebSocketHandler webSocketHandler;
+
+    @Resource
+    private com.wn.service.script.ScriptService scriptService;
+
     @Override
     @Transactional
     public DmRoomStatePO initRoomState(String roomId, Long scriptId) {
@@ -28,7 +37,11 @@ public class DmRoomServiceImpl implements DmRoomService {
         state.setRoomId(roomId);
         state.setScriptId(scriptId);
         state.setCurrentAct(1);
-        return roomStateMapper.save(state);
+        DmRoomStatePO saved = roomStateMapper.save(state);
+
+        sendWelcomeMessage(roomId, scriptId);
+
+        return saved;
     }
 
     @Override
@@ -92,6 +105,25 @@ public class DmRoomServiceImpl implements DmRoomService {
     @Transactional
     public void setChatDuration(String roomId, Integer minutes) {
         updateSetting(roomId, "chatDurationMinutes", minutes);
+    }
+
+    @Override
+    public void sendWelcomeMessage(String roomId, Long scriptId) {
+        com.wn.entity.script.ScriptPO script = scriptService.getById(scriptId);
+        String scriptName = script != null ? script.getScriptName() : "未知剧本";
+
+        Map<String, Object> data = Map.of(
+                "message", "🎭 欢迎来到《" + scriptName + "》剧本杀！\n\n请各位玩家阅读自己的角色剧本，准备开始游戏。\n祝大家玩得开心！",
+                "scriptId", scriptId,
+                "scriptName", scriptName
+        );
+
+        WsMessage<Map<String, Object>> message = WsMessage.<Map<String, Object>>builder()
+                .type("welcome")
+                .data(data)
+                .timestamp(System.currentTimeMillis())
+                .build();
+        webSocketHandler.broadcastToRoom(roomId, message);
     }
 
     private void updateSetting(String roomId, String field, Object value) {

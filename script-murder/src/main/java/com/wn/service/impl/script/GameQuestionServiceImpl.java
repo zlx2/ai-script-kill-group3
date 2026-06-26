@@ -12,16 +12,16 @@ import com.wn.entity.script.questions.GameQuestionAnalysisPO;
 import com.wn.entity.script.questions.GameQuestionOptionPO;
 import com.wn.entity.script.questions.GameQuestionPO;
 import com.wn.entity.script.questions.dto.QuestionAddReq;
-import com.wn.entity.script.questions.vo.AnswerResultVO;
-import com.wn.entity.script.questions.vo.AnswerSubmitReq;
-import com.wn.entity.script.questions.vo.QuestionOptionVO;
-import com.wn.entity.script.questions.vo.QuestionVO;
+import com.wn.entity.script.questions.vo.*;
 
 import com.wn.mapper.script.GameQuestionAnalysisRepository;
 import com.wn.mapper.script.GameQuestionOptionRepository;
 import com.wn.mapper.script.GameQuestionRepository;
 import com.wn.service.script.GameQuestionService;
 import jakarta.annotation.Resource;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,28 +38,27 @@ public class GameQuestionServiceImpl implements GameQuestionService {
     private GameQuestionOptionRepository optionRepo;
     @Resource
     private GameQuestionAnalysisRepository analysisRepo;
-
+    // 注入JPA实体管理器
+    @PersistenceContext
+    private EntityManager entityManager;
     // ========== 玩家查询：剧本+角色ID 查题目 ==========
     @Override
     @Transactional(readOnly = true)
     public R getQuestionByRole(Long scriptId, Long roleId) {
-        // 使用你新写的JPA方法 findByScriptIdAndRoleIdOrderBySortNumAsc
         List<GameQuestionPO> poList = questionRepo.findByScriptIdAndRoleIdOrderBySortNumAsc(scriptId, roleId);
         List<QuestionVO> voList = new ArrayList<>();
 
-        for (int i = 0; i < poList.size(); i++) {
-            GameQuestionPO po = poList.get(i);
+        for (GameQuestionPO po : poList) {
             QuestionVO vo = new QuestionVO();
+            // 拷贝同名属性
+            BeanUtils.copyProperties(po, vo);
             vo.setQuestionId(po.getId());
-            vo.setQuestionTitle(po.getQuestionTitle());
 
             List<GameQuestionOptionPO> optPOList = po.getOptionList();
             List<QuestionOptionVO> optVOList = new ArrayList<>();
-            for (int j = 0; j < optPOList.size(); j++) {
-                GameQuestionOptionPO optPO = optPOList.get(j);
+            for (GameQuestionOptionPO optPO : optPOList) {
                 QuestionOptionVO optVo = new QuestionOptionVO();
-                optVo.setOptionCode(optPO.getOptionCode());
-                optVo.setOptionContent(optPO.getOptionContent());
+                BeanUtils.copyProperties(optPO, optVo);
                 optVOList.add(optVo);
             }
             vo.setOptions(optVOList);
@@ -73,38 +72,27 @@ public class GameQuestionServiceImpl implements GameQuestionService {
     @Transactional(rollbackFor = Exception.class)
     public R addQuestion(QuestionAddReq req) {
         GameQuestionPO question = new GameQuestionPO();
-        // 从Req赋值新增的两个字段
-        question.setScriptId(req.getScriptId());
-        question.setRoleId(req.getRoleId());
-        question.setQuestionTitle(req.getQuestionTitle());
-        question.setSortNum(req.getSortNum());
+        BeanUtils.copyProperties(req, question);
         GameQuestionPO saveQ = questionRepo.save(question);
         Long qId = saveQ.getId();
 
         // 循环转换选项
         List<GameQuestionOptionPO> optList = new ArrayList<>();
         List<QuestionAddReq.QuestionOptionDto> dtoList = req.getOptionList();
-        for (int i = 0; i < dtoList.size(); i++) {
-            QuestionAddReq.QuestionOptionDto dto = dtoList.get(i);
+        for (QuestionAddReq.QuestionOptionDto dto : dtoList) {
             GameQuestionOptionPO opt = new GameQuestionOptionPO();
+            BeanUtils.copyProperties(dto, opt);
             opt.setQuestionId(qId);
-            // 子表同步冗余剧本、角色ID
             opt.setScriptId(req.getScriptId());
             opt.setRoleId(req.getRoleId());
-            opt.setOptionCode(dto.getOptionCode());
-            opt.setOptionContent(dto.getOptionContent());
-            opt.setIsCorrect(dto.getIsCorrect());
-            opt.setScore(dto.getScore());
             optList.add(opt);
         }
         optionRepo.saveAll(optList);
 
         // 保存解析
         GameQuestionAnalysisPO analysis = new GameQuestionAnalysisPO();
+        BeanUtils.copyProperties(req, analysis);
         analysis.setQuestionId(qId);
-        analysis.setScriptId(req.getScriptId());
-        analysis.setRoleId(req.getRoleId());
-        analysis.setAnalysis(req.getAnalysis());
         analysisRepo.save(analysis);
 
         return R.success(saveQ);
@@ -127,23 +115,16 @@ public class GameQuestionServiceImpl implements GameQuestionService {
         int totalScore = 0;
         List<String> selectCodes = req.getSelectCodes();
 
-        for (int i = 0; i < allOpt.size(); i++) {
-            GameQuestionOptionPO opt = allOpt.get(i);
-            if (opt.getIsCorrect() == 1) {
-                for (int j = 0; j < selectCodes.size(); j++) {
-                    String code = selectCodes.get(j);
-                    if (opt.getOptionCode().equals(code)) {
-                        totalScore = totalScore + opt.getScore();
-                        break;
-                    }
-                }
+        for (GameQuestionOptionPO opt : allOpt) {
+            if (opt.getIsCorrect() == 1 && selectCodes.contains(opt.getOptionCode())) {
+                totalScore += opt.getScore();
             }
         }
 
         String analysisText = "暂无解析";
-        Optional<GameQuestionAnalysisPO> analysisOpt = analysisRepo.findByQuestionId(req.getQuestionId());
-        if (analysisOpt.isPresent()) {
-            GameQuestionAnalysisPO analysisPO = analysisOpt.get();
+        List<GameQuestionAnalysisPO> analysisList = analysisRepo.findByQuestionId(req.getQuestionId());
+        if (!analysisList.isEmpty()) {
+            GameQuestionAnalysisPO analysisPO = analysisList.get(0);
             analysisText = analysisPO.getAnalysis();
         }
 
@@ -160,14 +141,39 @@ public class GameQuestionServiceImpl implements GameQuestionService {
         return R.success(allList);
     }
 
-    // ========== 原有详情、编辑、删除仅微调，贴完整 ==========
+    // ========== 题目详情 ==========
     @Override
+    @Transactional(readOnly = true) // 必须加事务
     public R getQuestionDetail(Long id) {
         Optional<GameQuestionPO> optional = questionRepo.findById(id);
         if (optional.isEmpty()) {
             return R.error("题目不存在");
         }
-        return R.success(optional.get());
+        GameQuestionPO po = optional.get();
+        // 查询选项与解析
+        List<GameQuestionOptionPO> optionPOList = optionRepo.findByQuestionId(id);
+        List<GameQuestionAnalysisPO> analysisList = analysisRepo.findByQuestionId(id);
+
+        // 组装VO
+        QuestionDetailVO vo = new QuestionDetailVO();
+        BeanUtils.copyProperties(po, vo);
+        // 转换选项
+        List<QuestionOptionVO> optVOList = new ArrayList<>();
+        for (GameQuestionOptionPO optPO : optionPOList) {
+            QuestionOptionVO optVo = new QuestionOptionVO();
+            BeanUtils.copyProperties(optPO, optVo);
+            optVo.setIsCorrect(optPO.getIsCorrect());
+            optVo.setScore(optPO.getScore());
+            optVOList.add(optVo);
+        }
+        vo.setOptions(optVOList);
+        // 解析赋值
+        if (!analysisList.isEmpty()) {
+            vo.setAnalysis(analysisList.get(0).getAnalysis());
+        } else {
+            vo.setAnalysis("暂无解析");
+        }
+        return R.success(vo);
     }
 
     @Override
@@ -178,11 +184,7 @@ public class GameQuestionServiceImpl implements GameQuestionService {
             return R.error("题目不存在");
         }
         GameQuestionPO question = optional.get();
-        // 更新剧本、角色、基础内容
-        question.setScriptId(req.getScriptId());
-        question.setRoleId(req.getRoleId());
-        question.setQuestionTitle(req.getQuestionTitle());
-        question.setSortNum(req.getSortNum());
+        BeanUtils.copyProperties(req, question);
         GameQuestionPO updateQ = questionRepo.save(question);
 
         // 先删旧数据
@@ -192,35 +194,54 @@ public class GameQuestionServiceImpl implements GameQuestionService {
         // 新增新选项
         List<GameQuestionOptionPO> optList = new ArrayList<>();
         List<QuestionAddReq.QuestionOptionDto> dtoList = req.getOptionList();
-        for (int i = 0; i < dtoList.size(); i++) {
-            QuestionAddReq.QuestionOptionDto dto = dtoList.get(i);
+        for (QuestionAddReq.QuestionOptionDto dto : dtoList) {
             GameQuestionOptionPO opt = new GameQuestionOptionPO();
+            BeanUtils.copyProperties(dto, opt);
             opt.setQuestionId(id);
             opt.setScriptId(req.getScriptId());
             opt.setRoleId(req.getRoleId());
-            opt.setOptionCode(dto.getOptionCode());
-            opt.setOptionContent(dto.getOptionContent());
-            opt.setIsCorrect(dto.getIsCorrect());
-            opt.setScore(dto.getScore());
             optList.add(opt);
         }
         optionRepo.saveAll(optList);
 
         // 新增解析
         GameQuestionAnalysisPO analysis = new GameQuestionAnalysisPO();
+        BeanUtils.copyProperties(req, analysis);
         analysis.setQuestionId(id);
-        analysis.setScriptId(req.getScriptId());
-        analysis.setRoleId(req.getRoleId());
-        analysis.setAnalysis(req.getAnalysis());
         analysisRepo.save(analysis);
-        return R.success(updateQ);
+
+        // 组装VO返回，现在查询用List，不会报唯一结果异常
+        QuestionDetailVO vo = new QuestionDetailVO();
+        BeanUtils.copyProperties(updateQ, vo);
+
+        List<GameQuestionOptionPO> opts = optionRepo.findByQuestionId(id);
+        List<QuestionOptionVO> optVos = new ArrayList<>();
+        for (GameQuestionOptionPO opt : opts) {
+            QuestionOptionVO ov = new QuestionOptionVO();
+            BeanUtils.copyProperties(opt, ov);
+            optVos.add(ov);
+        }
+        vo.setOptions(optVos);
+
+        // 核心修复：用List接收，不再强制唯一
+        List<GameQuestionAnalysisPO> analysisList = analysisRepo.findByQuestionId(id);
+        if (!analysisList.isEmpty()) {
+            vo.setAnalysis(analysisList.get(0).getAnalysis());
+        } else {
+            vo.setAnalysis("暂无解析");
+        }
+
+        return R.success(vo);
     }
 
+    // ========== 删除题目 ==========
     @Override
     @Transactional(rollbackFor = Exception.class)
     public R deleteQuestion(Long id) {
         optionRepo.deleteByQuestionId(id);
         analysisRepo.deleteByQuestionId(id);
+        // 强制刷新，同步删除到数据库，清除缓存关联
+        entityManager.flush();
         questionRepo.deleteById(id);
         return R.success();
     }

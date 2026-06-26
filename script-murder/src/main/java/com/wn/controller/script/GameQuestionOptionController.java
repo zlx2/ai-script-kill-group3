@@ -1,6 +1,6 @@
 /**
  * @Author: 弗
- * @Description:
+ * @Description:问题选项管理
  * @DateTime: 2026/6/25 18:52
  * @Component:
  **/
@@ -20,28 +20,28 @@ import java.util.List;
 @RequiredArgsConstructor
 public class GameQuestionOptionController {
     private final GameQuestionOptionService optionService;
-
-    @PostMapping("/batch")
+    //新增
+    @PostMapping("/batch")//测试通过
     public R batchAddOption(@Valid @RequestBody List<GameOptionEditDTO> dtoList) {
         return optionService.batchAddOption(dtoList);
     }
-
-    @PutMapping("/edit")
+    //编辑选项
+    @PutMapping("/edit")//测试通过
     public R editOption(@Valid @RequestBody GameOptionEditDTO dto) {
         return optionService.editOption(dto);
     }
-
-    @DeleteMapping("/{optionId}")
+    //删除选项
+    @DeleteMapping("/{optionId}")//测试通过
     public R deleteOption(@PathVariable Long optionId) {
         return optionService.deleteOption(optionId);
     }
-
-    @GetMapping("/list/{questionId}")
+    //根据问题id查询选项
+    @GetMapping("/list/{questionId}")//测试通过
     public R listOptionByQuestionId(@PathVariable Long questionId) {
         return optionService.listOptionByQuestionId(questionId);
     }
-
-    @GetMapping("/{optionId}")
+    //根据id查询选项
+    @GetMapping("/{optionId}")//测试通过
     public R getOptionById(@PathVariable Long optionId) {
         return optionService.getOptionById(optionId);
     }
