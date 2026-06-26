@@ -50,6 +50,8 @@ public class DmAgent {
                    - {"action": "end_voting", "reason": "原因"}
                    - {"action": "show_ending", "isCorrect": true, "reason": "原因"}
                    - {"action": "show_review", "reason": "原因"}
+                   - {"action": "show_questions", "reason": "显示当前剧本的所有题目"}
+                   - {"action": "check_player_questions", "roleId": 123, "reason": "检查某个角色的题目"}
                    - {"action": "wait", "reason": "等待玩家操作"}
                 3. 请严格按照JSON格式输出，不要包含其他文字
                 """.formatted(
