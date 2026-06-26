@@ -32,6 +32,9 @@ public class ScriptStagePO {
     @Column(name = "stage_name", nullable = false, length = 100)
     private String stageName;
 
+    @Column(name = "unlock_stage",nullable = false, length = 32)
+    private String unlockStage;
+
     @Column(name = "create_time", updatable = false)
     private LocalDateTime createTime;
 

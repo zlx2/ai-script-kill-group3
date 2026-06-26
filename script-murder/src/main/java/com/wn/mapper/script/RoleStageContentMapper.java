@@ -20,8 +20,11 @@ public interface RoleStageContentMapper extends JpaRepository<RoleStageContentPO
     /**
      * 根据剧本id、角色id 查询该角色全部分幕章节
      * 关联幕表获取幕号、幕名称
+     * @param scriptId 剧本ID
+     * @param roleId 角色ID
+     * @return 角色分幕内容列表
      */
-    @Query("SELECT RoleStageDTO(s.stageNo, s.stageName, r.mainContent, r.hintContent, r.unlockStage, true) " +
+    @Query("SELECT new com.wn.entity.script.stage.Dto.RoleStageDTO(s.stageNo, s.stageName, r.mainContent, r.hintContent, r.unlockStage, true) " +
             "FROM RoleStageContentPO r " +
             "LEFT JOIN ScriptStagePO s ON r.stageId = s.stageId " +
             "WHERE r.scriptId = :scriptId AND r.roleId = :roleId " +

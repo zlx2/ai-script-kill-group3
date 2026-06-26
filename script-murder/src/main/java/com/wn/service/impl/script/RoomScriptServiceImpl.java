@@ -26,7 +26,6 @@ import java.util.Optional;
 
 @Service
 public class RoomScriptServiceImpl implements RoomScriptService {
-
     @Resource
     private RoomUserRoleMapper roomUserRoleMapper;
     @Resource
@@ -38,7 +37,7 @@ public class RoomScriptServiceImpl implements RoomScriptService {
 
     @Override
     public R getRoomUserScript(RoomRoleScriptReq req) {
-        // 1. 根据roomId+userId 查询本局分配的剧本、角色ID
+        // 1. 根据房间+用户 查询本局分配剧本角色
         Optional<RoomUserRolePO> roomUserOpt = roomUserRoleMapper.findByRoomIdAndUserId(req.getRoomId(), req.getUserId());
         if (roomUserOpt.isEmpty()) {
             return new R(500, "当前用户未分配房间角色");
@@ -48,44 +47,52 @@ public class RoomScriptServiceImpl implements RoomScriptService {
         Long roleId = roomUser.getRoleId();
 
         // 2. 查询剧本基础信息
-        ScriptPO script = scriptMapper.findOneByScriptId(scriptId);
+        ScriptPO script = scriptMapper.findById(scriptId).orElse(null);
         if (script == null) {
             return new R(500, "剧本不存在");
         }
 
-        // 3. 查询角色基础信息（角色名、秘密）
-        Optional<ScriptRolePO> roleOpt = scriptRoleMapper.findById(roleId);
-        if (roleOpt.isEmpty()) {
+        // 3. 查询角色信息（角色名、私人秘密）
+        ScriptRolePO role = scriptRoleMapper.findById(roleId).orElse(null);
+        if (role == null) {
             return new R(500, "角色信息不存在");
         }
-        ScriptRolePO role = roleOpt.get();
 
-        // 4. 查询该角色所有分幕剧情
-        List<RoleStageDTO> chapterList = stageContentMapper.listRoleStage(scriptId, roleId);
-        if (chapterList.isEmpty()) {
-            return new R(500, "该角色暂无分幕剧本数据");
+        // 4. 查询该角色全部分幕剧情（关联分幕表拿stageNo、stageName）
+        List<RoleStageDTO> stageDtoList = stageContentMapper.listRoleStage(scriptId, roleId);
+        if (stageDtoList.isEmpty()) {
+            return new R(500, "暂无该角色分幕剧情数据");
         }
 
-        // 5. 组装私人隐藏信息
-        List<RolePrivateInfoVO> privateInfoList = new ArrayList<>();
-        RolePrivateInfoVO secret = new RolePrivateInfoVO();
-        secret.setLabel("🔒 私人信息（不可主动暴露）");
-        secret.setContent(role.getSecretInfo());
-        secret.setUnlockStage("reading");
-        secret.setIsUnlocked(true);
-        privateInfoList.add(secret);
-
-        // 6. 组装返回VO，前端直接渲染，无假数据
+        // 5. 组装VO，严格匹配截图返回JSON结构
         RoleScriptVO vo = new RoleScriptVO();
         vo.setTitle(script.getScriptName());
         vo.setRoleName(role.getRoleName());
-        vo.setBackground(chapterList.get(0).getMainContent());
-        vo.setChapters(chapterList);
-        vo.setPrivateInfo(privateInfoList);
-        // 自我介绍、证据扩展字段，本次先空，后续加表再填充
-        vo.setSelfIntro("");
-        vo.setEvidenceList(new ArrayList<>());
+        // 背景取第一章主线内容
+        vo.setBackground(stageDtoList.get(0).getMainContent());
 
+        // 封装chapters数组
+        List<RoleScriptVO.ChapterVO> chapterList = new ArrayList<>();
+        for (RoleStageDTO dto : stageDtoList) {
+            RoleScriptVO.ChapterVO chapter = new RoleScriptVO.ChapterVO();
+            chapter.setChapter(dto.getStageNo());
+            chapter.setTitle(dto.getStageName());
+            chapter.setContent(dto.getMainContent());
+            chapter.setUnlockStage(dto.getUnlockStage());
+            chapterList.add(chapter);
+        }
+        vo.setChapters(chapterList);
+
+        // 封装privateInfo数组
+        List<RoleScriptVO.PrivateInfoVO> secretList = new ArrayList<>();
+        RoleScriptVO.PrivateInfoVO secret = new RoleScriptVO.PrivateInfoVO();
+        secret.setLabel("🔒 私人信息（不可主动暴露）");
+        secret.setContent(role.getSecretInfo());
+        secret.setUnlockStage("reading");
+        secretList.add(secret);
+        vo.setPrivateInfo(secretList);
+
+        // 返回标准格式：{"code":200,"msg":"执行成功","data":vo}
         return new R(vo);
     }
 }

@@ -18,25 +18,25 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 @RestController
-@RequestMapping("/question")
+@RequestMapping("/game/question")
 @RequiredArgsConstructor
 @Slf4j
 public class GameQuestionController {
 
     private final GameQuestionService gameQuestionService;
 
-    // 玩家原有接口
+    //加载答题题目列表
     @GetMapping("/role/{roleType}")
     public R getQuestionByRole(@PathVariable String roleType) {
         return gameQuestionService.getQuestionByRole(roleType);
     }
-
+    //一次性完成题目 + 选项 + 解析保存
     @PostMapping("/add")
     public R addQuestion(@Valid @RequestBody QuestionAddReq req) {
         log.info("新增题目参数:{}", req);
         return gameQuestionService.addQuestion(req);
     }
-
+    //提交答案判分看解析
     @PostMapping("/answer/submit")
     public R submitAnswer(@Valid @RequestBody AnswerSubmitReq req) {
         return gameQuestionService.submitAnswer(req);
@@ -47,7 +47,7 @@ public class GameQuestionController {
     public R getQuestionDetail(@PathVariable Long id) {
         return gameQuestionService.getQuestionDetail(id);
     }
-
+    //一次性完成题目 + 选项 + 解析编辑题目
     @PutMapping("/edit/{id}")
     public R editQuestion(@PathVariable Long id, @Valid @RequestBody QuestionAddReq req) {
         return gameQuestionService.editQuestion(id, req);
