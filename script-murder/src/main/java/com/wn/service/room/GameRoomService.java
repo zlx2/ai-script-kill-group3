@@ -38,4 +38,6 @@ public  interface GameRoomService{
     RoomPO findByRoomNo(String roomNo) throws BusinessException;
 
     List<RoomDetailVO> getRoomList();
+
+    void forceLeaveRoom(String roomId, Long userId);
 }

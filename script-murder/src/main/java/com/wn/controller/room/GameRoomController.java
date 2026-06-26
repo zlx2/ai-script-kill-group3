@@ -105,7 +105,7 @@ public class GameRoomController {
             @RequestHeader("userId") Long userId) throws BusinessException {
 
         String roomId = gameRoomService.joinRoom(dto.getRoomNo(), dto.getPassword(), userId);
-        return new R(roomId);
+        return R.success(roomId);
     }
 
     /**
@@ -207,4 +207,11 @@ public class GameRoomController {
         gameRoomService.transferHost(roomId, targetUserId, userId);
         return R.SUCCESS;
     }
+
+    @PostMapping("/force-leave")
+    public R forceLeaveRoom(@RequestParam String roomId, @RequestHeader("userId") Long userId) {
+        gameRoomService.forceLeaveRoom(roomId, userId);
+        return R.success("已退出房间");
+    }
+
 }

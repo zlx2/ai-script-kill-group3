@@ -116,6 +116,53 @@ public class GameRoomServiceImpl implements GameRoomService {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    @Transactional
+    public void forceLeaveRoom(String roomId, Long userId) {
+        RoomPlayerPO player = roomPlayerMapper
+                .findByRoomIdAndUserIdAndLeaveTimeIsNull(roomId, userId);
+        if (player == null) {
+            return;
+        }
+
+        // 直接退出，不校验任何业务规则
+        player.setLeaveTime(LocalDateTime.now());
+        roomPlayerMapper.save(player);
+
+        RoomPO room = roomMapper.findById(roomId).orElse(null);
+        if (room == null) {
+            return;
+        }
+
+        // 更新房间人数
+        room.setCurrentPlayer(Math.max(0, room.getCurrentPlayer() - 1));
+
+        // 如果房主离开，转让给下一个玩家
+        if (player.getIsHost() == 1) {
+            RoomPlayerPO newHost = roomPlayerMapper
+                    .findFirstByRoomIdAndLeaveTimeIsNullOrderByJoinTimeAsc(roomId);
+            if (newHost != null) {
+                newHost.setIsHost((byte) 1);
+                roomPlayerMapper.save(newHost);
+                room.setHostId(newHost.getUserId());
+            }
+        }
+
+        // 如果房间没人了，标记结束
+        if (room.getCurrentPlayer() == 0) {
+            room.setRoomStatus(RoomStatusEnum.ENDED.getCode());
+            room.setEndTime(LocalDateTime.now());
+            roomMapper.save(room);
+        } else {
+            roomMapper.save(room);
+        }
+
+        cacheRoomInfo(room);
+        broadcastPlayerLeave(roomId, userId);
+        broadcastRoomUpdate(room);
+        webSocketHandler.userLeaveRoom(userId, roomId);
+    }
+
     /**
      * 根据房间号查房间
      */
@@ -728,6 +775,8 @@ public class GameRoomServiceImpl implements GameRoomService {
             info.put("hostNickname", host.getNickname());
             info.put("hostAvatar", host.getAvatar());
         }
+        info.put("isReady", 0);
+        info.put("isHost", 0);
 
         return info;
     }

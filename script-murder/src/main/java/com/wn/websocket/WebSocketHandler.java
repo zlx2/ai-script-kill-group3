@@ -7,8 +7,12 @@
 package com.wn.websocket;
 
 import com.alibaba.fastjson2.JSON;
+import com.wn.service.room.GameRoomService;
 import com.wn.websocket.vo.WsMessage;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -36,6 +40,13 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 @Component
 public class WebSocketHandler extends TextWebSocketHandler {
+
+    private GameRoomService gameRoomService;
+
+    @Autowired
+    public void setGameRoomService(@Lazy GameRoomService gameRoomService) {  // ← 加这整个方法
+        this.gameRoomService = gameRoomService;
+    }
 
     // ==================== 数据存储 ====================
 
@@ -119,25 +130,28 @@ public class WebSocketHandler extends TextWebSocketHandler {
         Long userId = getParamFromSession(session, "userId", Long.class);
         String roomId = getParamFromSession(session, "roomId", String.class);
 
+        if (userId != null && roomId != null && !"lobby".equals(roomId)) {
+            try {
+                gameRoomService.forceLeaveRoom(roomId, userId);
+                log.info("WebSocket断开，用户强制退出房间: userId={}, roomId={}", userId, roomId);
+            } catch (Exception e) {
+                log.error("用户断开连接强制退出房间失败: userId={}, roomId={}", userId, roomId, e);
+            }
+        }
+
+        // 清理内存
         if (userId != null) {
-            // 1. 从用户会话里移除
             userSessions.remove(userId);
-
-            // 2. 从大厅移除
             lobbyMembers.remove(userId);
-
-            // 3. 从房间移除
             if (roomId != null && !"lobby".equals(roomId)) {
                 ConcurrentHashMap<Long, Boolean> members = roomMembers.get(roomId);
                 if (members != null) {
                     members.remove(userId);
-                    // 如果房间没人了，把房间也清掉
                     if (members.isEmpty()) {
                         roomMembers.remove(roomId);
                     }
                 }
             }
-
             log.info("用户断开连接：userId={}", userId);
         }
     }
