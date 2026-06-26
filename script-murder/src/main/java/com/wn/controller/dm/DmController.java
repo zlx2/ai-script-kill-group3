@@ -214,4 +214,24 @@ public class DmController {
     public R addQuestion(@RequestBody QuestionAddReq req) {
         return questionService.addQuestion(req);
     }
+
+    @GetMapping("/question/detail/{id}")
+    public R getQuestionDetail(@PathVariable Long id) {
+        return questionService.getQuestionDetail(id);
+    }
+
+    @PutMapping("/question/edit/{id}")
+    public R editQuestion(@PathVariable Long id, @RequestBody QuestionAddReq req) {
+        return questionService.editQuestion(id, req);
+    }
+
+    @DeleteMapping("/question/{id}")
+    public R deleteQuestion(@PathVariable Long id) {
+        return questionService.deleteQuestion(id);
+    }
+
+    @GetMapping("/question/role/{scriptId}/{roleId}")
+    public R getQuestionByRole(@PathVariable Long scriptId, @PathVariable Long roleId) {
+        return questionService.getQuestionByRole(scriptId, roleId);
+    }
 }
