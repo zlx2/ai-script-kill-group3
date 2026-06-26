@@ -49,12 +49,7 @@ public class ScriptStageServiceImpl implements ScriptStageService {
     @Transactional(rollbackFor = Exception.class)
     public R addRoleStageContent(RoleStageContentAddReq req) {
         RoleStageContentPO po = new RoleStageContentPO();
-        po.setScriptId(req.getScriptId());
-        po.setRoleId(req.getRoleId());
-        po.setStageId(req.getStageId());
-        po.setMainContent(req.getMainContent());
-        po.setHintContent(req.getHintContent());
-        po.setUnlockStage(req.getUnlockStage());
+        BeanUtils.copyProperties(req, po);
         RoleStageContentPO save = roleStageContentMapper.save(po);
         return new R(save);
     }
@@ -63,10 +58,7 @@ public class ScriptStageServiceImpl implements ScriptStageService {
     @Transactional(rollbackFor = Exception.class)
     public R addRoomUserRole(RoomUserRoleAddReq req) {
         RoomUserRolePO po = new RoomUserRolePO();
-        po.setRoomId(req.getRoomId());
-        po.setUserId(req.getUserId());
-        po.setScriptId(req.getScriptId());
-        po.setRoleId(req.getRoleId());
+        BeanUtils.copyProperties(req, po);
         RoomUserRolePO save = roomUserRoleMapper.save(po);
         return new R(save);
     }
@@ -75,9 +67,7 @@ public class ScriptStageServiceImpl implements ScriptStageService {
     @Transactional(rollbackFor = Exception.class)
     public R addScriptStage(ScriptStageAddReq req) {
         ScriptStagePO po = new ScriptStagePO();
-        po.setScriptId(req.getScriptId());
-        po.setStageNo(req.getStageNo());
-        po.setStageName(req.getStageName());
+        BeanUtils.copyProperties(req, po);
         ScriptStagePO save = scriptStageMapper.save(po);
         return new R(save);
     }
