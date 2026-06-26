@@ -64,10 +64,10 @@ public class AuthInterceptor implements HandlerInterceptor {
             //1. jwt过期，但是refreshToken没过期，要续期！
             Userinfo userInfo = (Userinfo) redisTemplate.opsForHash().get(refreshToken, "userinfoPO");
             //2.jwt 需要重新生成！
-            String new_jwt = JWTUtil.generateToken(userInfo.getUsername(), userInfo.getId());
+            String new_jwt = JWTUtil.generateToken(userInfo.getUsername(), userInfo.getUserId());
             redisTemplate.opsForHash().putAll(refreshToken, Map.of("token",new_jwt,"userinfoPO",userInfo));
             redisTemplate.expire(refreshToken, 7, TimeUnit.DAYS);//7天过期
-            extracted(userInfo.getId(), userInfo.getUsername());
+            extracted(userInfo.getUserId(), userInfo.getUsername());
             //true 放行，false，拦截！
             return true;
         }else{

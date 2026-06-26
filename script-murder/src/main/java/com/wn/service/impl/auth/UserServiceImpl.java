@@ -180,13 +180,13 @@ public class UserServiceImpl implements UserService {
     //创建返回的token
     private String generateRefreshToken(Userinfo userInfoPO) {
         //生成一个jwt，存入用户名和id
-        String jwt = JWTUtil.generateToken(userInfoPO.getUsername(), userInfoPO.getId());
+        String jwt = JWTUtil.generateToken(userInfoPO.getUsername(), userInfoPO.getUserId());
         //生成uuid作为redis存储的key
         String refreshToken = UUID.randomUUID().toString();
         //用String类型把返回的refreshToken作为key存到redis jwt当value
         Map<String, Object> map = new HashMap<>();
         map.put("token", jwt);
-        map.put("userId", userInfoPO.getId());   // 只存 id
+        map.put("userId", userInfoPO.getUserId());   // 只存 id
         // 如果后续需要用户名，也可以存 username
         // map.put("username", userInfoPO.getUsername());
         redisTemplate.opsForHash().putAll(refreshToken, map);
@@ -196,7 +196,7 @@ public class UserServiceImpl implements UserService {
     //封装vo信息返回给前端
     private UserinfoVO toUserVO(Userinfo userInfoPO, String refreshToken) {
         UserinfoVO userinfoVO = new UserinfoVO();
-        userinfoVO.setUserId(userInfoPO.getId());
+        userinfoVO.setUserId(userInfoPO.getUserId());
         userinfoVO.setUsername(userInfoPO.getUsername());
         userinfoVO.setNickname(userInfoPO.getNickname());
         userinfoVO.setAvatar(userInfoPO.getAvatar());

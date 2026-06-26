@@ -18,7 +18,7 @@ public class Userinfo {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)//设置自增
     @Column(name = "user_id")
-    private Long Id;
+    private Long userId;
 
     //用户名
     @Column(name = "username", length = 50, nullable = false, unique = true)

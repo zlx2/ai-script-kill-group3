@@ -347,7 +347,7 @@ public class GameRoomServiceImpl implements GameRoomService {
             vo.setRoleId(p.getRoleId());
 
             users.stream()
-                    .filter(u -> u.getId().equals(p.getId()))
+                    .filter(u -> u.getUserId().equals(p.getUserId()))
                     .findFirst()
                     .ifPresent(u -> {
                         vo.setNickname(u.getNickname());
