@@ -26,7 +26,10 @@ public class UserController {
     @PostMapping("/register")
     public R register(@RequestBody UserinfoDTO userInfo){
         String msg=userService.register(userInfo);
-        return new R(msg);
+        if ("注册成功".equals(msg)) {
+            return R.success(msg);
+        }
+        return R.error(400, msg);
     }
     @PostMapping("/login")
     public R login(@RequestBody UserinfoDTO userInfoDTO){

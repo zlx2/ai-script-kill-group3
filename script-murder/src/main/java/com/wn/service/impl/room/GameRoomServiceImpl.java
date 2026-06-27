@@ -366,7 +366,7 @@ public class GameRoomServiceImpl implements GameRoomService {
         }
 
         room.setRoomStatus(RoomStatusEnum.PLAYING.getCode());
-        room.setCurrentStage("selecting");
+        room.setCurrentStage("select_role");
         room.setCurrentRound(1);
         room.setStartTime(LocalDateTime.now());
         roomMapper.save(room);
@@ -377,7 +377,7 @@ public class GameRoomServiceImpl implements GameRoomService {
         // 广播给大厅：房间状态变了
         broadcastRoomUpdate(room);
         //新增：广播选角色阶段开始
-        broadcastStageChange(roomId, "selecting");
+        broadcastStageChange(roomId, "select_role");
 
         System.out.println("游戏已开始，房间ID：" + roomId + "，状态：" + room.getRoomStatus());
     }
@@ -421,7 +421,7 @@ public class GameRoomServiceImpl implements GameRoomService {
                 () -> new BusinessException("房间不存在")
         );
 
-        if (!"selecting".equals(room.getCurrentStage())) {
+        if (!"select_role".equals(room.getCurrentStage())) {
             throw new BusinessException("当前不是选角色阶段");
         }
 
