@@ -9,10 +9,8 @@ package com.wn.controller.script;
 import com.wn.entity.R;
 
 
-import com.wn.entity.script.stage.RoomRoleScriptReq;
-import com.wn.entity.script.stage.vo.RoleScriptVO;
+import com.wn.entity.script.stage.req.RoomRoleScriptReq;
 import com.wn.service.script.RoomScriptService;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.PostMapping;

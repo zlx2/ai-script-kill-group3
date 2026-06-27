@@ -1,6 +1,6 @@
 /**
  * @Author: 弗
- * @Description:
+ * @Description:房间角色绑定用户的参数
  * @DateTime: 2026/6/25 14:39
  * @Component:
  **/

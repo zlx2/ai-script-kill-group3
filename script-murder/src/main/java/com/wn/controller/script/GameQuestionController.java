@@ -5,7 +5,7 @@
  * @Component:
  **/
 package com.wn.controller.script;
-
+//前三个优先对接
 import com.wn.entity.R;
 
 import com.wn.entity.script.questions.dto.QuestionAddReq;
@@ -25,23 +25,24 @@ public class GameQuestionController {
 
     private final GameQuestionService gameQuestionService;
 
-    // 玩家查询：路径携带剧本ID、角色ID
+    // 玩家查询剧本的其中一个角色的全部问题信息：路径携带剧本ID、角色ID
     @GetMapping("/{scriptId}/{roleId}")
     public R getQuestionByRole(
             @PathVariable Long scriptId,
             @PathVariable Long roleId
     ) {
+        System.out.println("查询角色" + roleId + "的题目");
         return gameQuestionService.getQuestionByRole(scriptId, roleId);
     }
 
-    // 后台新增
+    // 新增，路径携带剧本ID、角色ID做校验
     @PostMapping("/add")
     public R addQuestion(@Valid @RequestBody QuestionAddReq req) {
         log.info("新增题目参数:{}", req);
         return gameQuestionService.addQuestion(req);
     }
 
-    // 答题提交，路径携带剧本、角色ID做校验
+    // 答题提交，路径携带剧本、角色ID做校验，返回得分和答案解析
     @PostMapping("/answer/submit/{scriptId}/{roleId}")
     public R submitAnswer(
             @Valid @RequestBody AnswerSubmitReq req,

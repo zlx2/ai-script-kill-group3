@@ -1,6 +1,7 @@
 /**
  * @Author: 弗
- * @Description: 
+ * @Description: 返回角色隐藏信息
+ * @DateTime: 2026/6/25 11:11
  * @DateTime: 2026/6/25 11:10
  * @Component: 
  **/

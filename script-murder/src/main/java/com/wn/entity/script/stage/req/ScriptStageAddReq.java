@@ -1,6 +1,6 @@
 /**
  * @Author: 弗
- * @Description:
+ * @Description:剧本分幕基本信息添加参数
  * @DateTime: 2026/6/25 14:40
  * @Component:
  **/

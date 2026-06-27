@@ -1,6 +1,6 @@
 /**
  * @Author: 弗
- * @Description:
+ * @Description:剧本角色分幕信息接口
  * @DateTime: 2026/6/25 14:44
  * @Component:
  **/

@@ -1,6 +1,6 @@
 /**
  * @Author: 弗
- * @Description:
+ * @Description:添加角色分幕剧情参数
  * @DateTime: 2026/6/25 14:39
  * @Component:
  **/

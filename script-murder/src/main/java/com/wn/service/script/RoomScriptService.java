@@ -7,7 +7,7 @@
 package com.wn.service.script;
 
 import com.wn.entity.R;
-import com.wn.entity.script.stage.RoomRoleScriptReq;
+import com.wn.entity.script.stage.req.RoomRoleScriptReq;
 
 
 public interface RoomScriptService {
