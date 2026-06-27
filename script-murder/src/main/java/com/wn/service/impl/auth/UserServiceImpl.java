@@ -47,7 +47,11 @@ public class UserServiceImpl implements UserService {
      */
     @Override
     public void sendEmail(Map<String, String> params){
-        String email = params.get("username");
+        // 兼容 email 和 username 字段
+        String email = params.get("email");
+        if (email == null || email.isEmpty()) {
+            email = params.get("username");
+        }
         if (email == null || email.isEmpty()) {
             throw new  GlobalException(401,"邮箱不能为空");
         }
