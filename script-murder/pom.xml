@@ -104,11 +104,11 @@
             <groupId>redis.clients</groupId>
             <artifactId>jedis</artifactId>
         </dependency>
-        <!--     引入aliyun oss依赖   -->
+        <!--     腾讯云COS (通过S3 SDK兼容)   -->
         <dependency>
-            <groupId>com.aliyun.oss</groupId>
-            <artifactId>aliyun-sdk-oss</artifactId>
-            <version>3.17.4</version>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-s3</artifactId>
+            <version>1.12.765</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -166,8 +166,8 @@
             <url>https://maven.aliyun.com/repository/public</url>
         </repository>
         <repository>
-            <id>agentscope</id>
-            <url>https://maven.agentscope.io</url>
+            <id>central</id>
+            <url>https://repo1.maven.org/maven2</url>
         </repository>
     </repositories>
     <build>
@@ -190,6 +190,7 @@
                 <configuration>
                     <source>21</source>
                     <target>21</target>
+                    <parameters>true</parameters>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>

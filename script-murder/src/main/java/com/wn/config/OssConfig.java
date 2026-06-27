@@ -1,27 +1,39 @@
 package com.wn.config;
 
-import com.aliyun.oss.OSS;
-import com.aliyun.oss.OSSClientBuilder;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.client.builder.AwsClientBuilder;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * 阿里云OSS配置类,方便调用OSS服务，配置了四个参数
+ * 腾讯云COS配置（通过S3兼容协议）
  */
 @Configuration
+@ConditionalOnProperty(name = "cos.secret-id")
 public class OssConfig {
-    @Value("${aliyun.oss.endpoint}")
-    private String endpoint;
 
-    @Value("${aliyun.oss.access-key-id}")
-    private String accessKeyId;
+    @Value("${cos.secret-id}")
+    private String secretId;
 
-    @Value("${aliyun.oss.access-key-secret}")
-    private String accessKeySecret;
+    @Value("${cos.secret-key}")
+    private String secretKey;
 
-    @Bean(destroyMethod = "shutdown")//释放资源
-    public OSS ossClient() {
-        return new OSSClientBuilder().build(endpoint, accessKeyId, accessKeySecret);
+    @Value("${cos.region:ap-guangzhou}")
+    private String region;
+
+    @Bean(destroyMethod = "shutdown")
+    public AmazonS3 amazonS3() {
+        String endpoint = "https://cos." + region + ".myqcloud.com";
+        BasicAWSCredentials creds = new BasicAWSCredentials(secretId, secretKey);
+        return AmazonS3ClientBuilder.standard()
+                .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(endpoint, region))
+                .withCredentials(new AWSStaticCredentialsProvider(creds))
+                .withPathStyleAccessEnabled(true)
+                .build();
     }
 }

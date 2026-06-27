@@ -1,11 +1,11 @@
 package com.wn.game.handler;
 
+import com.wn.entity.dm.RoomCluePO;
 import com.wn.entity.game.GameEventPO;
-import com.wn.entity.game.RoomCluePO;
 import com.wn.entity.room.RoomPO;
 import com.wn.entity.room.RoomPlayerPO;
 import com.wn.game.*;
-import com.wn.mapper.game.RoomClueRepository;
+import com.wn.mapper.dm.DmRoomClueMapper;
 import com.wn.mapper.room.RoomPlayerMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -19,7 +19,7 @@ import java.util.*;
 @RequiredArgsConstructor
 public class SearchClueHandler implements RoomCommandHandler {
 
-    private final RoomClueRepository roomClueRepository;
+    private final DmRoomClueMapper dmRoomClueMapper;
     private final RoomPlayerMapper roomPlayerMapper;
 
     @Override
@@ -48,13 +48,13 @@ public class SearchClueHandler implements RoomCommandHandler {
             return CommandResult.fail("玩家不在房间内");
         }
 
-        // 创建房间线索（默认PRIVATE）
+        // 创建房间线索（默认未公开）
         RoomCluePO roomClue = new RoomCluePO();
         roomClue.setRoomId(room.getRoomId());
         roomClue.setClueId(clueId);
-        roomClue.setDiscoveredBy(command.userId());
-        roomClue.setVisibility("PRIVATE");
-        roomClueRepository.save(roomClue);
+        roomClue.setPlayerId(command.userId());
+        roomClue.setIsPublic(0);
+        dmRoomClueMapper.save(roomClue);
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("clueId", clueId);

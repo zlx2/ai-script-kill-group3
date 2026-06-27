@@ -1,6 +1,5 @@
 package com.wn.service.impl.oss;
 
-import com.aliyun.oss.OSS;
 import com.wn.entity.script.ScriptPO;
 import com.wn.entity.user.Userinfo;
 import com.wn.mapper.auth.UserinfoMapper;

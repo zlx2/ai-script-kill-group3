@@ -1,11 +1,11 @@
 package com.wn.game.handler;
 
+import com.wn.entity.dm.RoomVotePO;
 import com.wn.entity.game.GameEventPO;
-import com.wn.entity.game.RoomVotePO;
 import com.wn.entity.room.RoomPO;
 import com.wn.entity.room.RoomPlayerPO;
 import com.wn.game.*;
-import com.wn.mapper.game.RoomVoteRepository;
+import com.wn.mapper.dm.DmRoomVoteMapper;
 import com.wn.mapper.room.RoomMapper;
 import com.wn.mapper.room.RoomPlayerMapper;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +20,7 @@ import java.util.*;
 @RequiredArgsConstructor
 public class SubmitVoteHandler implements RoomCommandHandler {
 
-    private final RoomVoteRepository roomVoteRepository;
+    private final DmRoomVoteMapper dmRoomVoteMapper;
     private final RoomPlayerMapper roomPlayerMapper;
     private final RoomMapper roomMapper;
 
@@ -51,16 +51,16 @@ public class SubmitVoteHandler implements RoomCommandHandler {
         }
 
         // 检查是否已投过
-        if (roomVoteRepository.findByRoomIdAndUserId(room.getRoomId(), command.userId()).isPresent()) {
+        if (dmRoomVoteMapper.existsByRoomIdAndPlayerId(room.getRoomId(), command.userId())) {
             return CommandResult.fail("已投票，不能重复投票");
         }
 
         // 保存投票
         RoomVotePO vote = new RoomVotePO();
         vote.setRoomId(room.getRoomId());
-        vote.setUserId(command.userId());
-        vote.setTargetRoleId(targetRoleId);
-        roomVoteRepository.save(vote);
+        vote.setPlayerId(command.userId());
+        vote.setVoteRoleId(targetRoleId);
+        dmRoomVoteMapper.save(vote);
 
         List<GameEventPO> events = new ArrayList<>();
 
@@ -80,12 +80,12 @@ public class SubmitVoteHandler implements RoomCommandHandler {
 
         // 检查是否所有人都投票了
         long playerCount = roomPlayerMapper.findByRoomIdAndLeaveTimeIsNull(room.getRoomId()).size();
-        long voteCount = roomVoteRepository.countByRoomId(room.getRoomId());
+        List<RoomVotePO> allVotes = dmRoomVoteMapper.findByRoomId(room.getRoomId());
 
-        if (voteCount >= playerCount) {
+        if (allVotes.size() >= playerCount) {
             // 所有人都投完了 → 投票结束事件
             Map<String, Object> finishPayload = new HashMap<>();
-            finishPayload.put("totalVotes", voteCount);
+            finishPayload.put("totalVotes", allVotes.size());
 
             GameEventPO finishEvent = new GameEventPO();
             finishEvent.setRoomId(room.getRoomId());

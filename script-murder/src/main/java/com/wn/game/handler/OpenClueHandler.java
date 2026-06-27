@@ -1,11 +1,11 @@
 package com.wn.game.handler;
 
+import com.wn.entity.dm.RoomCluePO;
 import com.wn.entity.game.GameEventPO;
-import com.wn.entity.game.RoomCluePO;
 import com.wn.entity.room.RoomPO;
 import com.wn.entity.room.RoomPlayerPO;
 import com.wn.game.*;
-import com.wn.mapper.game.RoomClueRepository;
+import com.wn.mapper.dm.DmRoomClueMapper;
 import com.wn.mapper.room.RoomPlayerMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -20,7 +20,7 @@ import java.util.*;
 @RequiredArgsConstructor
 public class OpenClueHandler implements RoomCommandHandler {
 
-    private final RoomClueRepository roomClueRepository;
+    private final DmRoomClueMapper dmRoomClueMapper;
     private final RoomPlayerMapper roomPlayerMapper;
 
     @Override
@@ -42,10 +42,10 @@ public class OpenClueHandler implements RoomCommandHandler {
             return CommandResult.fail("缺少线索ID");
         }
 
-        // 查找该玩家拥有的这条线索
-        List<RoomCluePO> clues = roomClueRepository.findByRoomIdAndDiscoveredBy(room.getRoomId(), command.userId());
+        // 查找该玩家拥有的这条未公开线索
+        List<RoomCluePO> clues = dmRoomClueMapper.findByRoomIdAndPlayerId(room.getRoomId(), command.userId());
         RoomCluePO targetClue = clues.stream()
-                .filter(c -> c.getClueId().equals(clueId) && "PRIVATE".equals(c.getVisibility()))
+                .filter(c -> c.getClueId().equals(clueId) && c.getIsPublic() == 0)
                 .findFirst().orElse(null);
 
         if (targetClue == null) {
@@ -53,9 +53,9 @@ public class OpenClueHandler implements RoomCommandHandler {
         }
 
         // 公开
-        targetClue.setVisibility("PUBLIC");
-        targetClue.setOpenedAt(LocalDateTime.now());
-        roomClueRepository.save(targetClue);
+        targetClue.setIsPublic(1);
+        targetClue.setObtainTime(LocalDateTime.now());
+        dmRoomClueMapper.save(targetClue);
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("clueId", clueId);
