@@ -218,15 +218,18 @@ public class WebSocketHandler extends TextWebSocketHandler {
         Long userId = getParamFromSession(session, "userId", Long.class);
 
         if (userId != null) {
-            // 【修复】遍历 roomMembers 查找用户实际所在的房间
+            // 断线不退房 — 只清理内存，不 forceLeaveRoom
             String userRoomId = findUserRoomId(userId);
+            // 广播玩家离线
             if (userRoomId != null) {
-                try {
-                    gameRoomService.forceLeaveRoom(userRoomId, userId);
-                    log.info("WebSocket断开，用户强制退出房间: userId={}, roomId={}", userId, userRoomId);
-                } catch (Exception e) {
-                    log.error("用户断开连接强制退出房间失败: userId={}, roomId={}", userId, userRoomId, e);
-                }
+                Map<String, Object> data = new HashMap<>();
+                data.put("userId", userId);
+                broadcastToRoom(userRoomId, WsMessage.builder()
+                        .type("PLAYER_OFFLINE")
+                        .data(data)
+                        .timestamp(System.currentTimeMillis())
+                        .build());
+                log.info("WebSocket断开，玩家离线: userId={}, roomId={}", userId, userRoomId);
             }
             // 统一清理所有内存记录
             cleanupUser(userId);
