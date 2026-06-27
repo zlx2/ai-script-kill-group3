@@ -9,11 +9,13 @@ import com.wn.entity.room.RoomPlayerPO;
 import com.wn.entity.script.ScriptPO;
 import com.wn.entity.script.ScriptRolePO;
 import com.wn.entity.script.stage.RoomUserRolePO;
+import com.wn.entity.script.stage.ScriptStagePO;
 import com.wn.entity.user.Userinfo;
 import com.wn.mapper.room.RoomMapper;
 import com.wn.mapper.room.RoomPlayerMapper;
 import com.wn.mapper.script.RoomUserRoleMapper;
 import com.wn.mapper.script.ScriptRoleMapper;
+import com.wn.mapper.script.ScriptStageMapper;
 import com.wn.service.auth.UserService;
 import com.wn.service.exception.BusinessException;
 import com.wn.service.room.GameRoomService;
@@ -47,6 +49,9 @@ public class GameRoomServiceImpl implements GameRoomService {
 
     @Resource
     private RoomUserRoleMapper roomUserRoleMapper;
+
+    @Resource
+    private ScriptStageMapper scriptStageMapper;
 
     /**
      * 创建房间
@@ -461,6 +466,40 @@ public class GameRoomServiceImpl implements GameRoomService {
             cacheRoomInfo(room);
             broadcastStageChange(roomId, "reading");
         }
+    }
+
+    @Override
+    @Transactional
+    public int advanceAct(String roomId) {
+        RoomPO room = roomMapper.findById(roomId)
+                .orElseThrow(() -> new BusinessException("房间不存在"));
+
+        // 获取剧本所有分幕
+        List<ScriptStagePO> stages = scriptStageMapper.findByScriptIdOrderByStageNoAsc(room.getScriptId());
+        if (stages.isEmpty()) {
+            throw new BusinessException("该剧本没有分幕");
+        }
+
+        int currentAct = room.getCurrentRound() == null ? 0 : room.getCurrentRound();
+        if (currentAct >= stages.size()) {
+            throw new BusinessException("已经是最后一幕");
+        }
+
+        // 推进到下一幕
+        int newAct = currentAct + 1;
+        room.setCurrentRound(newAct);
+
+        // 更新当前阶段为下一幕对应的阶段
+        ScriptStagePO nextStage = stages.get(newAct - 1);
+        room.setCurrentStage(nextStage.getUnlockStage());
+
+        roomMapper.save(room);
+        cacheRoomInfo(room);
+
+        // 广播阶段变更
+        broadcastStageChange(roomId, nextStage.getUnlockStage());
+
+        return newAct;
     }
 
     private void broadcastRoleSelected(String roomId, Long userId, Long roleId) {

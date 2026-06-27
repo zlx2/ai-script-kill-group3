@@ -43,5 +43,8 @@ public  interface GameRoomService{
     void forceLeaveRoom(String roomId, Long userId);
 
     List<ScriptRolePO> getAvailableRoles(String roomId);
+
     void selectRole(String roomId, Long roleId, Long userId);
+
+    int advanceAct(String roomId);
 }

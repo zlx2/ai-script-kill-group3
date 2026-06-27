@@ -229,4 +229,14 @@ public class GameRoomController {
         return R.success("角色选择成功");
     }
 
+    /**
+     * 推进阶段
+     * POST /api/room/advance-act
+     */
+    @PostMapping("/advance-act")
+    public R advanceAct(@RequestParam String roomId) {
+        int newAct = gameRoomService.advanceAct(roomId);
+        return R.success(newAct);
+    }
+
 }
