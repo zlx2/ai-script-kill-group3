@@ -9,16 +9,22 @@ package com.wn.service.impl.room;
 import com.wn.controller.enums.room.RoomStatusEnum;
 import com.wn.entity.room.RoomPO;
 import com.wn.entity.room.RoomPlayerPO;
+import com.wn.entity.user.Userinfo;
 import com.wn.mapper.room.RoomMapper;
 import com.wn.mapper.room.RoomPlayerMapper;
+import com.wn.service.auth.UserService;
 import com.wn.service.exception.BusinessException;
 import com.wn.service.room.FaceToFaceService;
 import com.wn.service.room.GameRoomService;
+import com.wn.websocket.WebSocketHandler;
+import com.wn.websocket.vo.WsMessage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
@@ -29,6 +35,8 @@ public class FaceToFaceServiceImpl implements FaceToFaceService {
     private final RoomPlayerMapper roomPlayerMapper;
     private final GameRoomService gameRoomService;
     private final RedisTemplate<String, Object> redisTemplate;
+    private final WebSocketHandler webSocketHandler;//新增
+    private final UserService userService;//新增
     private static final String F2F_KEY_PREFIX = "face2face:";
     private static final int EXPIRE_MINUTES = 5;
     /**
@@ -233,14 +241,59 @@ public class FaceToFaceServiceImpl implements FaceToFaceService {
             player.setJoinTime(LocalDateTime.now());
             roomPlayerMapper.save(player);
 
-            freshRoom.setCurrentPlayer(freshRoom.getCurrentPlayer() + 1);
-            roomMapper.save(freshRoom);
-            cacheRoomInfo(freshRoom);
+            /**
+             *  修复：创建房间/面对面加入时 WebSocket 频道未切换的问题
+             *  原因：把房主加入数据库并广播给大厅，但没有调用 userEnterRoom()，导致房主一直留在 lobbyMembers 中
+             *      joinRoomNoPassword() 只做了数据库操作，完全没有 WebSocket 状态更新（无广播、无频道切换）
+             *      补充了 webSocketHandler.userEnterRoom() 调用，面对面加入还会广播 player_join 到房间、room_update 到大厅
+             */
+            broadcastPlayerJoin(freshRoom.getRoomId(), userId);
+            // 2. 广播给大厅：房间人数变了
+            broadcastRoomUpdate(freshRoom);
+            // 3. 切换 WebSocket 频道（从大厅进入房间）
+            webSocketHandler.userEnterRoom(userId, freshRoom.getRoomId());
+
             return freshRoom.getRoomId();
         } finally {
             redisTemplate.delete(lockKey);
         }
     }
+
+    /**
+     * 【新增】广播玩家加入房间
+     */
+    private void broadcastPlayerJoin(String roomId, Long userId) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("userId", userId);
+        Userinfo user = userService.getById(userId);
+        if (user != null) {
+            data.put("nickname", user.getNickname());
+            data.put("avatar", user.getAvatar());
+        }
+
+        webSocketHandler.broadcastToRoom(roomId, WsMessage.builder()
+                .type("player_join")
+                .data(data)
+                .timestamp(System.currentTimeMillis())
+                .build());
+    }
+
+    /**
+     * 【新增】广播房间更新给大厅
+     */
+    private void broadcastRoomUpdate(RoomPO room) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("roomId", room.getRoomId());
+        data.put("currentPlayer", room.getCurrentPlayer());
+        data.put("roomStatus", room.getRoomStatus());
+
+        webSocketHandler.broadcastToLobby(WsMessage.builder()
+                .type("room_update")
+                .data(data)
+                .timestamp(System.currentTimeMillis())
+                .build());
+    }
+
     private void cacheRoomInfo(RoomPO room) {
         String key = "room:info:" + room.getRoomId();
         redisTemplate.opsForValue().set(key, room, 30, TimeUnit.MINUTES);

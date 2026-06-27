@@ -9,6 +9,8 @@ package com.wn.websocket;
 import com.alibaba.fastjson2.JSON;
 import com.wn.service.room.GameRoomService;
 import com.wn.websocket.vo.WsMessage;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,8 +22,12 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 游戏 WebSocket 处理器
@@ -48,6 +54,66 @@ public class WebSocketHandler extends TextWebSocketHandler {
     public void setGameRoomService(@Lazy GameRoomService gameRoomService) {  // ← 加这整个方法
         this.gameRoomService = gameRoomService;
     }
+    //================================================心跳监测（在线检测）=============================================================
+
+    /** 心跳超时时间：60秒无心跳视为断开 */
+    private static final long HEARTBEAT_TIMEOUT_MS = 60_000;
+
+    /** 心跳检测间隔 */
+    private static final long HEARTBEAT_CHECK_INTERVAL_MS = 30_000;
+
+    /** 用户最后心跳时间：userId → 时间戳 */
+    private final ConcurrentHashMap<Long, Long> userHeartbeats = new ConcurrentHashMap<>();
+
+    /** 心跳检测定时器 */
+    private final ScheduledExecutorService heartbeatScheduler = Executors.newSingleThreadScheduledExecutor();
+
+    /**
+     * 初始化心跳检测定时器
+     */
+    @PostConstruct
+    public void init() {
+        heartbeatScheduler.scheduleAtFixedRate(
+                this::checkHeartbeat,
+                HEARTBEAT_CHECK_INTERVAL_MS,
+                HEARTBEAT_CHECK_INTERVAL_MS,
+                TimeUnit.MILLISECONDS
+        );
+        log.info("WebSocket 心跳检测已启动，间隔={}ms", HEARTBEAT_CHECK_INTERVAL_MS);
+    }
+
+    /**
+     * 销毁心跳检测定时器
+     */
+    @PreDestroy
+    public void destroy() {
+        heartbeatScheduler.shutdown();
+        log.info("WebSocket 心跳检测已停止");
+    }
+    /**
+     * 定期检查心跳，清理超时连接
+     */
+    private void checkHeartbeat() {
+        long now = System.currentTimeMillis();
+        userHeartbeats.forEach((userId, lastHeartbeat) -> {
+            if (now - lastHeartbeat > HEARTBEAT_TIMEOUT_MS) {
+                log.warn("心跳超时，清理连接: userId={}, 最后心跳={}ms前",
+                        userId, now - lastHeartbeat);
+                WebSocketSession session = userSessions.get(userId);
+                if (session != null && session.isOpen()) {
+                    try {
+                        // 关闭连接
+                        session.close(CloseStatus.SESSION_NOT_RELIABLE);
+                    } catch (IOException e) {
+                        log.debug("关闭超时连接异常: userId={}", userId, e);
+                    }
+                }
+                // 清理用户数据
+                cleanupUser(userId);
+            }
+        });
+    }
+
 
     // ==================== 数据存储 ====================
 
@@ -102,10 +168,29 @@ public class WebSocketHandler extends TextWebSocketHandler {
             return;
         }
 
-        // 3. 保存用户会话
-        userSessions.put(userId, session);
+        /**
+         * 3. 【修复】如果用户已存在（重连），先关闭旧连接并清理旧状态
+         *  原因：当连接断开时，afterConnectionClosed 通过 session.getUri().getQuery() 读取 roomId。
+         *      但用户通过 HTTP API 加入房间后，WebSocket 的 session URI 不会更新，所以读到的仍然是旧的 roomId
+         *  解决：新增 findUserRoomId() 方法，遍历 roomMembers 查找用户实际所在的房间，不再依赖 session URI。
+         */
+        WebSocketSession oldSession = userSessions.get(userId);
+        if (oldSession != null && oldSession.isOpen()) {
+            log.info("用户重连，关闭旧连接: userId={}", userId);
+            try {
+                oldSession.close(CloseStatus.SESSION_NOT_RELIABLE);
+            } catch (IOException e) {
+                log.debug("关闭旧连接异常: userId={}", userId, e);
+            }
+        }
+        cleanupUser(userId);
 
-        // 4. 判断是在大厅还是在房间
+        // 4. 保存用户会话
+        userSessions.put(userId, session);
+        // 保存心跳时间
+        userHeartbeats.put(userId, System.currentTimeMillis());
+
+        // 5. 判断是在大厅还是在房间
         if (roomId == null || "lobby".equals(roomId)) {
             // 在大厅
             lobbyMembers.put(userId, true);
@@ -123,36 +208,28 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
     /**
      * 连接关闭后自动调用
-     *
-     * 类比：有人离开小区了，门卫把他的登记信息删掉
+     *      【修复内容】
+     *      不再依赖 session URI 中的 roomId（该参数在建立连接后不会更新），
+     *      改为遍历 roomMembers 查找用户实际所在的房间进行清理，
+     *      避免因 session URI 记录的 roomId 与实际状态不一致导致用户"卡在"房间中。
      */
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
         Long userId = getParamFromSession(session, "userId", Long.class);
-        String roomId = getParamFromSession(session, "roomId", String.class);
 
-        if (userId != null && roomId != null && !"lobby".equals(roomId)) {
-            try {
-                gameRoomService.forceLeaveRoom(roomId, userId);
-                log.info("WebSocket断开，用户强制退出房间: userId={}, roomId={}", userId, roomId);
-            } catch (Exception e) {
-                log.error("用户断开连接强制退出房间失败: userId={}, roomId={}", userId, roomId, e);
-            }
-        }
-
-        // 清理内存
         if (userId != null) {
-            userSessions.remove(userId);
-            lobbyMembers.remove(userId);
-            if (roomId != null && !"lobby".equals(roomId)) {
-                ConcurrentHashMap<Long, Boolean> members = roomMembers.get(roomId);
-                if (members != null) {
-                    members.remove(userId);
-                    if (members.isEmpty()) {
-                        roomMembers.remove(roomId);
-                    }
+            // 【修复】遍历 roomMembers 查找用户实际所在的房间
+            String userRoomId = findUserRoomId(userId);
+            if (userRoomId != null) {
+                try {
+                    gameRoomService.forceLeaveRoom(userRoomId, userId);
+                    log.info("WebSocket断开，用户强制退出房间: userId={}, roomId={}", userId, userRoomId);
+                } catch (Exception e) {
+                    log.error("用户断开连接强制退出房间失败: userId={}, roomId={}", userId, userRoomId, e);
                 }
             }
+            // 统一清理所有内存记录
+            cleanupUser(userId);
             log.info("用户断开连接：userId={}", userId);
         }
     }
@@ -161,8 +238,9 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
     /**
      * 收到前端发来的消息时调用
-     *
-     * 类比：有人给物业打电话，说"帮我喊一下3栋的张三"
+     *      【增添内容】
+     *      添加了信令消息处理，确保在房间内进行的信令交换正常进行。
+     *      发送当前状态给用户（用于重连后同步）
      */
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
@@ -209,6 +287,31 @@ public class WebSocketHandler extends TextWebSocketHandler {
             log.error("处理 WebSocket 消息失败", e);
         }
     }
+    /**
+     * 【新增】发送当前状态给用户（用于重连后同步）
+     */
+    private void sendCurrentState(Long userId) {
+        // 查找用户所在的房间
+        // 如果用户不在大厅，返回空字符串
+        String roomId = findUserRoomId(userId);
+        boolean inLobby = lobbyMembers.containsKey(userId);
+
+        // 构建状态同步数据
+        Map<String, Object> syncData = new HashMap<>();
+        syncData.put("inLobby", inLobby);
+        syncData.put("roomId", roomId);
+        syncData.put("serverTime", System.currentTimeMillis());
+
+        // 发送状态同步消息
+        sendToUser(userId, WsMessage.builder()
+                .type("sync_state")
+                .data(syncData)
+                .timestamp(System.currentTimeMillis())
+                .build());
+
+        log.debug("已推送状态同步: userId={}, inLobby={}, roomId={}", userId, inLobby, roomId);
+    }
+
 
     // ==================== 4. 广播方法（对外提供） ====================
 
@@ -337,7 +440,42 @@ public class WebSocketHandler extends TextWebSocketHandler {
     // ==================== 7. 内部工具方法 ====================
 
     /**
+     * 【新增】统一清理用户在所有追踪结构中的记录
+     * 在连接关闭、重连、心跳超时时调用，确保状态一致
+     */
+    private void cleanupUser(Long userId) {
+        userSessions.remove(userId);
+        lobbyMembers.remove(userId);
+        userHeartbeats.remove(userId);
+
+        // 遍历所有房间，清理该用户的记录
+        roomMembers.forEach((roomId, members) -> {
+            if (members != null) {
+                members.remove(userId);
+            }
+        });
+        // 移除空房间
+        roomMembers.values().removeIf(Map::isEmpty);
+    }
+
+    /**
+     * 【新增】遍历 roomMembers 查找用户所在的房间
+     * 不依赖 session URI，始终返回用户当前实际所在的房间
+     */
+    private String findUserRoomId(Long userId) {
+        for (Map.Entry<String, ConcurrentHashMap<Long, Boolean>> entry : roomMembers.entrySet()) {
+            if (entry.getValue().containsKey(userId)) {
+                return entry.getKey();
+            }
+        }
+        return null;
+    }
+
+
+
+    /**
      * 给指定用户发消息（内部方法，传 JSON 字符串）
+     *
      */
     private void sendToUserInternal(Long userId, String json) {
         WebSocketSession session = userSessions.get(userId);
@@ -352,7 +490,6 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
     /**
      * 从 WebSocket 连接参数里取出指定参数
-     *
      * 前端连接时是这样的：ws://xxx/ws/game?userId=1001&roomId=lobby
      * 这个方法就是从 ? 后面的参数里取值
      */

@@ -90,6 +90,8 @@ public class GameRoomServiceImpl implements GameRoomService {
         cacheRoomInfo(room);
         //创建房间后广播给大厅
         broadcastNewRoom(room);
+        // 【修复】将创建者从大厅切换到房间的 WebSocket 频道
+        webSocketHandler.userEnterRoom(userId, room.getRoomId());
         return roomNo;
     }
 
