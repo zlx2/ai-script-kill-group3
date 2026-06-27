@@ -7,25 +7,26 @@ import com.wn.controller.room.vo.RoomPlayerVO;
 import com.wn.entity.room.RoomPO;
 import com.wn.entity.room.RoomPlayerPO;
 import com.wn.entity.script.ScriptPO;
+import com.wn.entity.script.ScriptRolePO;
+import com.wn.entity.script.stage.RoomUserRolePO;
 import com.wn.entity.user.Userinfo;
 import com.wn.mapper.room.RoomMapper;
 import com.wn.mapper.room.RoomPlayerMapper;
+import com.wn.mapper.script.RoomUserRoleMapper;
+import com.wn.mapper.script.ScriptRoleMapper;
 import com.wn.service.auth.UserService;
 import com.wn.service.exception.BusinessException;
 import com.wn.service.room.GameRoomService;
 import com.wn.service.script.ScriptService;
 import com.wn.websocket.WebSocketHandler;
 import com.wn.websocket.vo.WsMessage;
+import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -40,6 +41,12 @@ public class GameRoomServiceImpl implements GameRoomService {
     private final RedisTemplate<String, Object> redisTemplate;
 
     private final WebSocketHandler webSocketHandler;
+
+    @Resource
+    private ScriptRoleMapper scriptRoleMapper;
+
+    @Resource
+    private RoomUserRoleMapper roomUserRoleMapper;
 
     /**
      * 创建房间
@@ -352,20 +359,121 @@ public class GameRoomServiceImpl implements GameRoomService {
         }
 
         room.setRoomStatus(RoomStatusEnum.PLAYING.getCode());
-        room.setCurrentStage(GameStageEnum.READING.getCode());
+        room.setCurrentStage("selecting");
         room.setCurrentRound(1);
         room.setStartTime(LocalDateTime.now());
-
         roomMapper.save(room);
         cacheRoomInfo(room);
 
-        // 开始游戏后广播
-        // 广播给房间内的人
+        // 广播给房间内的人：游戏开始
         broadcastGameStart(roomId);
-        // 广播给大厅（房间状态变了）
+        // 广播给大厅：房间状态变了
         broadcastRoomUpdate(room);
+        //新增：广播选角色阶段开始
+        broadcastStageChange(roomId, "selecting");
 
         System.out.println("游戏已开始，房间ID：" + roomId + "，状态：" + room.getRoomStatus());
+    }
+
+    // 新增广播方法
+    private void broadcastStageChange(String roomId, String stage) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("stage", stage);
+
+        WsMessage<Map<String, Object>> message = WsMessage.<Map<String, Object>>builder()
+                .type("stage_change")
+                .data(data)
+                .timestamp(System.currentTimeMillis())
+                .build();
+        webSocketHandler.broadcastToRoom(roomId, message);
+    }
+
+    @Override
+    public List<ScriptRolePO> getAvailableRoles(String roomId) {
+        RoomPO room = roomMapper.findById(roomId).orElseThrow(
+                () -> new BusinessException("房间不存在")
+        );
+
+        List<ScriptRolePO> allRoles = scriptRoleMapper.findByScriptId(room.getScriptId());
+        List<RoomPlayerPO> players = roomPlayerMapper.findByRoomIdAndLeaveTimeIsNull(roomId);
+
+        Set<Long> takenRoleIds = players.stream()
+                .filter(p -> p.getRoleId() != null)
+                .map(RoomPlayerPO::getRoleId)
+                .collect(Collectors.toSet());
+
+        return allRoles.stream()
+                .filter(r -> !takenRoleIds.contains(r.getRoleId()))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public void selectRole(String roomId, Long roleId, Long userId) {
+        RoomPO room = roomMapper.findById(roomId).orElseThrow(
+                () -> new BusinessException("房间不存在")
+        );
+
+        if (!"selecting".equals(room.getCurrentStage())) {
+            throw new BusinessException("当前不是选角色阶段");
+        }
+
+        RoomPlayerPO player = roomPlayerMapper.findByRoomIdAndUserIdAndLeaveTimeIsNull(roomId, userId);
+        if (player == null) {
+            throw new BusinessException("玩家不在房间内");
+        }
+
+        if (player.getRoleId() != null) {
+            throw new BusinessException("已选择角色，不能更改");
+        }
+
+        // 检查角色是否已被选
+        List<RoomPlayerPO> players = roomPlayerMapper.findByRoomIdAndLeaveTimeIsNull(roomId);
+        boolean taken = players.stream()
+                .filter(p -> !p.getUserId().equals(userId))
+                .anyMatch(p -> roleId.equals(p.getRoleId()));
+        if (taken) {
+            throw new BusinessException("该角色已被选择");
+        }
+
+        // 分配角色
+        player.setRoleId(roleId);
+        roomPlayerMapper.save(player);
+
+        // 保存到 RoomUserRolePO
+        RoomUserRolePO rur = new RoomUserRolePO();
+        rur.setRoomId(roomId);
+        rur.setUserId(userId);
+        rur.setScriptId(room.getScriptId());
+        rur.setRoleId(roleId);
+        roomUserRoleMapper.save(rur);
+
+        // 广播角色选择
+        broadcastRoleSelected(roomId, userId, roleId);
+
+        // 检查是否全部选完
+        List<RoomPlayerPO> allPlayers = roomPlayerMapper.findByRoomIdAndLeaveTimeIsNull(roomId);
+        boolean allSelected = allPlayers.stream().allMatch(p -> p.getRoleId() != null);
+
+        if (allSelected) {
+            room.setCurrentStage("reading");
+            roomMapper.save(room);
+            cacheRoomInfo(room);
+            broadcastStageChange(roomId, "reading");
+        }
+    }
+
+    private void broadcastRoleSelected(String roomId, Long userId, Long roleId) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("userId", userId);
+        data.put("roleId", roleId);
+
+        WsMessage<Map<String, Object>> message = WsMessage.<Map<String, Object>>builder()
+                .type("role_selected")
+                .data(data)
+                .timestamp(System.currentTimeMillis())
+                .build();
+        webSocketHandler.broadcastToRoom(roomId, message);
     }
 
     /**

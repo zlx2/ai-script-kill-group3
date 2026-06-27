@@ -12,6 +12,7 @@ import lombok.Getter;
 public enum GameStageEnum {
 
     WAITING("waiting", "等待开始"),
+    SELECTING("selecting", "选择角色"),
     READING("reading", "阅读剧本"),
     DISCUSSION("discussion", "公聊讨论"),
     SEARCHING("searching", "搜证阶段"),

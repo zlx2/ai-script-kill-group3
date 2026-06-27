@@ -214,4 +214,19 @@ public class GameRoomController {
         return R.success("已退出房间");
     }
 
+
+    @GetMapping("/{roomId}/available-roles")
+    public R getAvailableRoles(@PathVariable String roomId) {
+        return new R(gameRoomService.getAvailableRoles(roomId));
+    }
+
+    @PostMapping("/select-role")
+    public R selectRole(
+            @RequestParam String roomId,
+            @RequestParam Long roleId,
+            @RequestHeader("userId") Long userId) {
+        gameRoomService.selectRole(roomId, roleId, userId);
+        return R.success("角色选择成功");
+    }
+
 }

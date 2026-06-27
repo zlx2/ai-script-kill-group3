@@ -3,6 +3,7 @@ package com.wn.service.room;
 import com.wn.controller.room.vo.RoomDetailVO;
 import com.wn.controller.room.vo.RoomPlayerVO;
 import com.wn.entity.room.RoomPO;
+import com.wn.entity.script.ScriptRolePO;
 import com.wn.service.exception.BusinessException;
 
 import java.util.List;
@@ -40,4 +41,7 @@ public  interface GameRoomService{
     List<RoomDetailVO> getRoomList();
 
     void forceLeaveRoom(String roomId, Long userId);
+
+    List<ScriptRolePO> getAvailableRoles(String roomId);
+    void selectRole(String roomId, Long roleId, Long userId);
 }
